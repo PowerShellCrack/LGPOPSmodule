@@ -1,4 +1,9 @@
-﻿Function Set-SystemSetting {
+﻿### -----------------------------------
+### Set-SystemSetting Cmdlet
+### -----------------------------------
+
+
+Function Set-SystemSetting {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     Param (
 
@@ -185,6 +190,9 @@
 
 }
 
+### -----------------------------------
+### Set-UserSetting Cmdlet
+### -----------------------------------
 
 Function Set-UserSetting {
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
@@ -368,3 +376,12 @@ Function Set-UserSetting {
 
     }
 }
+
+$exportModuleMemberParams = @{
+    Function = @(
+        'Set-SystemSetting',
+        'Set-UserSettinge'
+    )
+}
+
+Export-ModuleMember @exportModuleMemberParams
