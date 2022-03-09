@@ -6,6 +6,7 @@
 - Updated psd1; added root module and functions to export; foxes exported commands
 - Updated versioning to meet 4 integer requirements
 - Fixed pms1 to psm1 to call right file
+- Changed user cmdlets to \<action\>-LocalPolicyUserSetting; standardized policy cmdlets
 
 ## 1.0.1 Feb 26, 2022
 

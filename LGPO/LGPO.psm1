@@ -408,10 +408,10 @@ Function Remove-LocalPolicySetting {
 
 
 ### -----------------------------------
-### Set-LocalUserPolicySetting Cmdlet
+### Set-LocalPolicyUserSetting Cmdlet
 ### -----------------------------------
 
-Function Set-LocalUserPolicySetting {
+Function Set-LocalPolicyUserSetting {
     <#
         .SYNOPSIS
         Converts registry key into GPO for user policy
@@ -446,7 +446,7 @@ Function Set-LocalUserPolicySetting {
         Defaults to "C:\ProgramData\LGPO\LGPO.exe". Download LGPO from https://www.microsoft.com/en-us/download/details.aspx?id=55319. Use this to specify alternate location
 
         .EXAMPLE
-        Set-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+        Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
     #>
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
@@ -609,10 +609,10 @@ Function Set-LocalUserPolicySetting {
 
 
 ### -----------------------------------
-### Remove-LocalUserPolicySetting Cmdlet
+### Remove-LocalPolicyUserSetting Cmdlet
 ### -----------------------------------
 
-Function Remove-LocalUserPolicySetting {
+Function Remove-LocalPolicyUserSetting {
     <#
         .SYNOPSIS
         Removes GPO setting on user
@@ -641,7 +641,7 @@ Function Remove-LocalUserPolicySetting {
         Defaults to "C:\ProgramData\LGPO\LGPO.exe". Download LGPO from https://www.microsoft.com/en-us/download/details.aspx?id=55319. Use this to specify alternate location
 
         .EXAMPLE
-        Remove-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter'
+        Remove-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter'
     #>
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
@@ -798,8 +798,8 @@ $exportModuleMemberParams = @{
     Function = @(
         'Set-LocalPolicySetting',
         'Remove-LocalPolicySetting',
-        'Set-LocalUserPolicySetting',
-        'Remove-LocalUserPolicySetting'
+        'Set-LocalPolicyUserSetting',
+        'Remove-LocalPolicyUserSetting'
     )
 }
 

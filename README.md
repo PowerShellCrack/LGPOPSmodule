@@ -14,8 +14,8 @@ You can get it from here 'https://www.microsoft.com/en-us/download/details.aspx?
 
  - Set-LocalPolicySetting - Attempts to apply local security policy.
  - Remove-LocalPolicySetting - Attempts to remove local security policy.
- - Set-LocalUserPolicySetting - Defaults to all users. Applies policy to all users
- - Remove-LocalUserPolicySetting - Defaults to all users. removes policy setting for all users
+ - Set-LocalPolicyUserSetting - Defaults to all users. Applies policy to all users
+ - Remove-LocalPolicyUserSetting - Defaults to all users. removes policy setting for all users
 
 ## Install
 
@@ -28,9 +28,9 @@ Set-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Im
 
 Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience'
 
-Set-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
 
-Remove-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
+Remove-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
 ```
 
 ## Validate
