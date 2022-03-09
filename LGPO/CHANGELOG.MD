@@ -1,6 +1,10 @@
 # Change log for LGPO module
 
 
+## 1.0.2 Mar 08, 2022
+
+- Updated psd1; added root module and functions to export; foxes exported commands
+
 ## 1.0.1 Feb 26, 2022
 
 - Renamed modules to be more accurate.
