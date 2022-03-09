@@ -4,6 +4,8 @@
 ## 1.0.2 Mar 08, 2022
 
 - Updated psd1; added root module and functions to export; foxes exported commands
+- Updated versioning to meet 4 integer requirements
+- Fixed pms1 to psm1 to call right file
 
 ## 1.0.1 Feb 26, 2022
 
