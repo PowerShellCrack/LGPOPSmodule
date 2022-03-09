@@ -17,9 +17,15 @@ You can get it from here 'https://www.microsoft.com/en-us/download/details.aspx?
  - Set-LocalPolicyUserSetting - Defaults to all users. Applies policy to all users
  - Remove-LocalPolicyUserSetting - Defaults to all users. removes policy setting for all users
 
+## Updates
+
+- SEE [CHANGELOG.MD](.\CHANGELOG.MD)
+
+### NOTE: If installed this module before, be sure to run __Uninstall-Module LGPO -AllVersions__ to ensure to uninstall older versions. _The module cmdlets have changed_
+
 ## Install
 
-Install-Module -Name LGPO
+__Install-Module -Name LGPO__
 
 ## Examples
 
