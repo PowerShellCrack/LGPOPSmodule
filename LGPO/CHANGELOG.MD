@@ -1,16 +1,11 @@
 # Change log for LGPO module
 
+## 1.0.2 May 12, 2022
 
-<<<<<<< HEAD
-=======
-## 1.0.2.2 Mar 08, 2022
+- Fixed ExpandString for LGPO.
+- Added delete all for LGPO
+- Removed Qword from type option, not used in LGPO. 
 
-- Updated psd1; added root module and functions to export; foxes exported commands
-- Updated versioning to meet 4 integer requirements
-- Fixed pms1 to psm1 to call right file
-- Changed user cmdlets to \<action\>-LocalPolicyUserSetting; standardized policy cmdlets
-
->>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
 ## 1.0.1 Feb 26, 2022
 
 - Renamed modules to be more accurate.
