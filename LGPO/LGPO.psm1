@@ -20,7 +20,7 @@ Function Set-LocalPolicySetting {
         Required. Specify path to registry item
 
         .PARAMETER Name
-        Specify Name of registry key to set. If no name specified, RegPath will be split up to use leaf as name
+        Required. Specify Name of registry key to set.
 
         .PARAMETER Type
         Default to 'DWord'. Specify type of registry item
@@ -44,25 +44,29 @@ Function Set-LocalPolicySetting {
         Set-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Type DWord -Value 0 -Verbose
 
         .EXAMPLE
+        Set-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Type DWord -Value 0 -Debug
+        Working files will be left in temp folder for debugging
+
+        .EXAMPLE
         Set-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Type DWord -Value 0 -LGPOBinaryPath c:\lgpo\lgpo.exe
     #>
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     Param (
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory=$true,Position=1)]
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$false,Position=1)]
+        [Parameter(Mandatory=$true,Position=2)]
         [Alias("v")]
         [string]$Name,
 
-        [Parameter(Mandatory=$false,Position=2)]
+        [Parameter(Mandatory=$false,Position=3)]
         [ValidateSet('None','String','Binary','DWord','ExpandString','MultiString','QWord')]
         [Alias("PropertyType","t")]
         $Type = 'DWord',
 
-        [Parameter(Mandatory=$True,Position=3)]
+        [Parameter(Mandatory=$True,Position=4)]
         [Alias("d")]
         $Value,
 
@@ -92,20 +96,18 @@ Function Set-LocalPolicySetting {
             $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
         }
 
+        if (-not $PSBoundParameters.ContainsKey('Debug')) {
+            $DebugPreference = $PSCmdlet.SessionState.PSVariable.GetValue('DebugPreference')
+        }
     }
     Process
     {
         $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
 
         #if Name not specified, grab last value from full path
-        If(!$Name){
-            $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
-            $RegKeyName = Split-Path ($RegPath).Split('\',2)[1] -Leaf
-        }
-        Else{
-            $RegKeyPath = ($RegPath).Split('\',2)[1]
-            $RegKeyName = $Name
-        }
+        $RegKeyPath = ($RegPath).Split('\',2)[1]
+        $RegKeyName = $Name
+        
 
         #The -split operator supports specifying the maximum number of sub-strings to return.
         #Some values may have additional commas in them that we don't want to split (eg. LegalNoticeText)
@@ -149,7 +151,7 @@ Function Set-LocalPolicySetting {
             $lgpoout += "`r`n"
 
             # build a unique output file
-            $LgpoFileName = ($RegKeyHive + '-' + $RegKeyPath.replace('\','-').replace(' ','') + '-' + $RegKeyName.replace(' ','') + '.lgpo')
+            $LgpoFileName = ('LGPO-Set-' + $RegKeyHive + '-' + $RegKeyPath.replace('\','-').replace(' ','') + '-' + $RegKeyName.replace(' ',''))
 
             #Remove the Username or SID from Registry key path
             If($LGPOHive -eq 'User'){
@@ -160,25 +162,25 @@ Function Set-LocalPolicySetting {
             }
 
             #complete LGPO file
-            Write-Verbose ("{0} :: LGPO applying [{4}] to registry: [{1}\{2}\{3}] as a Group Policy item" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$RegKeyName)
+            Write-Verbose ("{0} :: Generating LGPO configuration file [{3}] for [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
             $lgpoout += "$LGPOHive`r`n"
             $lgpoout += "$RegKeyPath`r`n"
             $lgpoout += "$RegKeyName`r`n"
             $lgpoout += "$($LGPORegType):$Value`r`n"
             $lgpoout += "`r`n"
-            $lgpoout | Out-File "$env:Temp\$LgpoFileName" -Force
+            $lgpoout | Out-File "$env:Temp\$LgpoFileName.lgpo" -Force
 
             If($VerbosePreference){$lgpoargs = "/v /q /t"}Else{$lgpoargs="/q /t"}
 
             If($WhatIfPreference)
             {
-                Write-Output ("What if: Performing the operation ""Start-Process"" on target ""{1}"" with argument ""$lgpoargs $env:Temp\$LgpoFileName /v""." -f ${CmdletName},$LGPOBinaryPath)
+                Write-Output ("What if: Performing the operation ""Start-Process"" on target ""{1}"" with argument ""$lgpoargs $env:Temp\$LgpoFileName.lgpo /v""." -f ${CmdletName},$LGPOBinaryPath)
             }
             Else
             {
-                Write-Verbose ("{0} :: Start-Process {1} -ArgumentList '/t {2}' -RedirectStandardError '{3}' -RedirectStandardOutput '{4}' -Wait -NoNewWindow -PassThru" -f ${CmdletName},$LGPOBinaryPath,"$env:Temp\$LgpoFileName","$env:Temp\$LgpoFileName.stderr","$env:Temp\$LgpoFileName.stdout")
+                Write-Verbose ("{0} :: Start-Process {1} -ArgumentList '/t {2}' -RedirectStandardError '{3}' -RedirectStandardOutput '{4}' -Wait -NoNewWindow -PassThru" -f ${CmdletName},$LGPOBinaryPath,"$env:Temp\$LgpoFileName.lgpo","$env:Temp\$LgpoFileName.stderr","$env:Temp\$LgpoFileName.stdout")
                 Try{
-                    $result = Start-Process $LGPOBinaryPath -ArgumentList "$lgpoargs $env:Temp\$LgpoFileName /v" -RedirectStandardError "$env:Temp\$LgpoFileName.stderr" -RedirectStandardOutput "$env:Temp\$LgpoFileName.stdout" -Wait -NoNewWindow -PassThru -ErrorAction Stop
+                    $result = Start-Process $LGPOBinaryPath -ArgumentList "$lgpoargs $env:Temp\$LgpoFileName.lgpo /v" -RedirectStandardError "$env:Temp\$LgpoFileName.stderr" -RedirectStandardOutput "$env:Temp\$LgpoFileName.stdout" -Wait -NoNewWindow -PassThru -ErrorAction Stop
                     Write-Verbose ("{0} :: LGPO ran successfully." -f ${CmdletName})
                 }
                 Catch{
@@ -205,7 +207,7 @@ Function Set-LocalPolicySetting {
                 }
 
                 Write-Verbose ("{0} :: Setting key name [{2}] at path [{1}] with value [{3}]" -f ${CmdletName},($RegHive +'\'+ $RegKeyPath),$RegKeyName,$Value)
-                Set-ItemProperty -Path $RegPath -Name $RegKeyName -Value $Value -Force:$Force -WhatIf:$WhatIfPreference -ErrorAction Stop | Out-Null
+                Set-ItemProperty -Path $RegPath -Name $RegKeyName -Value $Value -Force:$Force -WhatIf:$WhatIfPreference -ErrorAction Stop
             }
             Catch{
                 Write-Error ("{0} :: Unable to configure registry key [{1}\{2}\{3}]. {5}" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$Value,$_.Exception.Message)
@@ -213,10 +215,12 @@ Function Set-LocalPolicySetting {
         }
     }
     End {
-        #cleanup LGPO temp files
-        If( (Test-Path "$env:Temp\$LgpoFileName" -PathType Leaf) -and !$WhatIfPreference){
-               Remove-Item "$env:Temp\$LgpoFileName" -ErrorAction SilentlyContinue -Force | Out-Null
-        }
+        #cleanup LGPO temp files if not debugging
+        If( (Test-Path "$env:Temp\$LgpoFileName.lgpo" -PathType Leaf) -and !$DebugPreference ){
+            Remove-Item "$env:Temp\$LgpoFileName.lgpo" -ErrorAction SilentlyContinue -Force | Out-Null
+            Remove-Item "$env:Temp\$LgpoFileName.stderr" -ErrorAction SilentlyContinue -Force | Out-Null
+            Remove-Item "$env:Temp\$LgpoFileName.stdout" -ErrorAction SilentlyContinue -Force | Out-Null
+     }
     }
 
 }
@@ -268,17 +272,18 @@ Function Remove-LocalPolicySetting {
         Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -LGPOBinaryPath c:\lgpo\lgpo.exe
 
     #>
-    [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium',DefaultParameterSetName='name')]
     Param (
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory=$true,Position=1,ParameterSetName="name")]
+        [Parameter(Mandatory=$true,Position=1,ParameterSetName="all")]
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$false,Position=1,ParameterSetName="one")]
+        [Parameter(Mandatory=$true,Position=2,ParameterSetName="name")]
         [Alias("v")]
         [string]$Name,
 
-        [Parameter(Mandatory=$false,ParameterSetName="all")]
+        [Parameter(Mandatory=$true,Position=2,ParameterSetName="all")]
         [Alias("a")]
         [switch]$AllValues,
 
@@ -308,21 +313,24 @@ Function Remove-LocalPolicySetting {
             $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
         }
 
+        if (-not $PSBoundParameters.ContainsKey('Debug')) {
+            $DebugPreference = $PSCmdlet.SessionState.PSVariable.GetValue('DebugPreference')
+        }
     }
     Process
     {
         $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
 
         #if Name not specified, grab last value from full path
-        If(!$Name){
-            $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
-            $RegKeyName = Split-Path ($RegPath).Split('\',2)[1] -Leaf
+        # build a unique output file
+        $RegKeyPath = ($RegPath).Split('\',2)[1]
+        If($AllValues){
+            $RegKeyName = '*'
         }
         Else{
-            $RegKeyPath = ($RegPath).Split('\',2)[1]
             $RegKeyName = $Name
         }
-
+        
         Switch($RegKeyHive){
             HKEY_LOCAL_MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:'}
             MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:'}
@@ -349,7 +357,12 @@ Function Remove-LocalPolicySetting {
             $lgpoout += "`r`n"
 
             # build a unique output file
-            $LgpoFileName = ($RegKeyHive + '-' + $RegKeyPath.replace('\','-').replace(' ','') + '-' + $RegKeyName.replace(' ','') + '.lgpo')
+            If($AllValues){
+                $LgpoFileName = ('LGPO-Remove-' + $RegKeyHive + '-' + $RegKeyPath.replace('\','-').replace(' ','') + '-All-Keys')
+            }
+            Else{
+                $LgpoFileName = ('LGPO-Remove-' + $RegKeyHive + '-' + $RegKeyPath.replace('\','-').replace(' ','') + '-' + $RegKeyName.replace(' ',''))
+            }
 
             #Remove the Username or SID from Registry key path
             If($LGPOHive -eq 'User'){
@@ -360,7 +373,7 @@ Function Remove-LocalPolicySetting {
             }
 
             #complete LGPO file
-            Write-Verbose ("{0} :: LGPO applying [{4}] to registry: [{1}\{2}\{3}] as a Group Policy item" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$RegKeyName)
+            Write-Verbose ("{0} :: Generating LGPO removal configuration file for [{1}\{2}\{3}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
             $lgpoout += "$LGPOHive`r`n"
             $lgpoout += "$RegKeyPath`r`n"
             If($AllValues){
@@ -370,22 +383,20 @@ Function Remove-LocalPolicySetting {
                 $lgpoout += "$RegKeyName`r`n"
                 $lgpoout += "DELETE`r`n"
             }
-            $lgpoout += "$RegKeyName`r`n"
-            $lgpoout += "DELETE`r`n"
             $lgpoout += "`r`n"
-            $lgpoout | Out-File "$env:Temp\$LgpoFileName" -Force
+            $lgpoout | Out-File "$env:Temp\$LgpoFileName.lgpo" -Force
 
             If($VerbosePreference){$lgpoargs = "/v /q /t"}Else{$lgpoargs="/q /t"}
 
             If($WhatIfPreference)
             {
-                Write-Output ("What if: Performing the operation ""Start-Process"" on target ""{1}"" with argument ""$lgpoargs $env:Temp\$LgpoFileName /v""." -f ${CmdletName},$LGPOBinaryPath)
+                Write-Output ("What if: Performing the operation ""Start-Process"" on target ""{1}"" with argument ""$lgpoargs $env:Temp\$LgpoFileName.lgpo /v""." -f ${CmdletName},$LGPOBinaryPath)
             }
             Else
             {
-                Write-Verbose ("{0} :: Start-Process {1} -ArgumentList '/t {2}' -RedirectStandardError '{3}' -RedirectStandardOutput '{4}' -Wait -NoNewWindow -PassThru" -f ${CmdletName},$LGPOBinaryPath,"$env:Temp\$LgpoFileName","$env:Temp\$LgpoFileName.stderr","$env:Temp\$LgpoFileName.stdout")
+                Write-Verbose ("{0} :: Start-Process {1} -ArgumentList '/t {2}' -RedirectStandardError '{3}' -RedirectStandardOutput '{4}' -Wait -NoNewWindow -PassThru" -f ${CmdletName},$LGPOBinaryPath,"$env:Temp\$LgpoFileName.lgpo","$env:Temp\$LgpoFileName.stderr","$env:Temp\$LgpoFileName.stdout")
                 Try{
-                    $result = Start-Process $LGPOBinaryPath -ArgumentList "$lgpoargs $env:Temp\$LgpoFileName /v" -RedirectStandardError "$env:Temp\$LgpoFileName.stderr" -RedirectStandardOutput "$env:Temp\$LgpoFileName.stdout" -Wait -NoNewWindow -PassThru -ErrorAction Stop
+                    $result = Start-Process $LGPOBinaryPath -ArgumentList "$lgpoargs $env:Temp\$LgpoFileName.lgpo /v" -RedirectStandardError "$env:Temp\$LgpoFileName.stderr" -RedirectStandardOutput "$env:Temp\$LgpoFileName.stdout" -Wait -NoNewWindow -PassThru -ErrorAction Stop
                     Write-Verbose ("{0} :: LGPO ran successfully." -f ${CmdletName})
                 }
                 Catch{
@@ -404,18 +415,18 @@ Function Remove-LocalPolicySetting {
                 Write-Verbose ("{0} :: Force enabled. Removing all registry keys from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath)
                 #verify the registry value has been set
                 Try{
-                    Remove-ItemProperty -Path $RegPath -Name * -Force -WhatIf:$WhatIfPreference -ErrorAction Stop | Out-Null
+                    Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction Stop
                 }
                 Catch{
                     Write-Error ("{0} :: Unable to remove registry keys from [{1}\{2}]. {3}" -f ${CmdletName},$RegHive,$RegKeyPath,$_.Exception.Message)
                 }
             }
             Else{
-                Write-Verbose ("{0} :: Force enabled. Removing registry keys [{1}\{2}\{3}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
+                Write-Verbose ("{0} :: Force enabled. Removing registry key [{3}] from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
                 #verify the registry value has been set
                 Try{
                     Write-Verbose ("{0} :: Removing key name [{2}] at path [{1}]" -f ${CmdletName},($RegHive +'\'+ $RegKeyPath),$RegKeyName)
-                    Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction Stop | Out-Null
+                    Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction Stop
                 }
                 Catch{
                     Write-Error ("{0} :: Unable to remove registry key [{1}\{2}\{3}]. {4}" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$_.Exception.Message)
@@ -425,9 +436,11 @@ Function Remove-LocalPolicySetting {
         }
     }
     End {
-        #cleanup LGPO temp files
-        If( (Test-Path "$env:Temp\$LgpoFileName" -PathType Leaf) -and !$WhatIfPreference){
-               Remove-Item "$env:Temp\$LgpoFileName" -ErrorAction SilentlyContinue -Force | Out-Null
+        #cleanup LGPO temp files if not debugging
+        If( (Test-Path "$env:Temp\$LgpoFileName.lgpo" -PathType Leaf) -and !$DebugPreference ){
+               Remove-Item "$env:Temp\$LgpoFileName.lgpo" -ErrorAction SilentlyContinue -Force | Out-Null
+               Remove-Item "$env:Temp\$LgpoFileName.stderr" -ErrorAction SilentlyContinue -Force | Out-Null
+               Remove-Item "$env:Temp\$LgpoFileName.stdout" -ErrorAction SilentlyContinue -Force | Out-Null
         }
     }
 

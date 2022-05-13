@@ -1,5 +1,13 @@
 # Change log for LGPO module
 
+
+## 1.0.2.5 May 13, 2022
+
+- Fixed Remove local settings for all values parameter
+- Added debugging to cmdlets; leave working files in temp directory. 
+- renamed working files to reflect cmdlet running; provides better troubleshooting
+- Changed Set and remove to force Name parameter; also fixed default parameters calls
+
 ## 1.0.2.4 May 12, 2022
 
 - Fixed ExpandString for LGPO.
