@@ -126,12 +126,21 @@ Function Set-LocalPolicySetting {
         #convert registry type to LGPO type
         Switch($Type){
             'None' {$LGPORegType = 'NONE'}
+<<<<<<< HEAD
             'String' {$LGPORegType = 'SZ';}
             'ExpandString' {$LGPORegType = 'EXSZ';}
             'Binary' {$LGPORegType = 'BINARY'; $value = (Convert-ToHexString $value)}
             'DWord' {$LGPORegType = 'DWORD'}
             'QWord' {$LGPORegType = 'DWORD_BIG_ENDIAN'}
             'MultiString' {$LGPORegType = 'MULTISZ'}
+=======
+            'String' {$LGPORegType = 'SZ'}
+            'ExpandString' {$LGPORegType = 'EXPAND_SZ'}
+            'Binary' {$LGPORegType = 'BINARY'; $value = Convert-ToHexString $value}
+            'DWord' {$LGPORegType = 'DWORD'}
+            'QWord' {$LGPORegType = 'DWORD_BIG_ENDIAN'}
+            'MultiString' {$LGPORegType = 'LINK'}
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
             default {$LGPORegType = 'DWORD';$Type = 'DWord'}
         }
 
@@ -246,9 +255,12 @@ Function Remove-LocalPolicySetting {
         .PARAMETER Name
         Specify Name of registry key to remove. If no name specified, RegPath will be split up to use leaf as name
 
+<<<<<<< HEAD
         .PARAMETER AllValues
         Ignores name and deletes all keys within path.
 
+=======
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
         .PARAMETER Force
         If LGPO failed, this will remove the registry item anyway
 
@@ -274,6 +286,7 @@ Function Remove-LocalPolicySetting {
         [Alias("Path")]
         [string]$RegPath,
 
+<<<<<<< HEAD
         [Parameter(Mandatory=$false,Position=1,ParameterSetName="one")]
         [Alias("v")]
         [string]$Name,
@@ -282,6 +295,12 @@ Function Remove-LocalPolicySetting {
         [Alias("a")]
         [switch]$AllValues,
 
+=======
+        [Parameter(Mandatory=$false,Position=1)]
+        [Alias("v")]
+        [string]$Name,
+
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
         [Parameter(Mandatory=$false)]
         [Alias("f")]
         [switch]$Force,
@@ -363,6 +382,7 @@ Function Remove-LocalPolicySetting {
             Write-Verbose ("{0} :: LGPO applying [{4}] to registry: [{1}\{2}\{3}] as a Group Policy item" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$RegKeyName)
             $lgpoout += "$LGPOHive`r`n"
             $lgpoout += "$RegKeyPath`r`n"
+<<<<<<< HEAD
             If($AllValues){
                 $lgpoout += "*`r`n"
                 $lgpoout += "DELETEALLVALUES`r`n"
@@ -370,6 +390,8 @@ Function Remove-LocalPolicySetting {
                 $lgpoout += "$RegKeyName`r`n"
                 $lgpoout += "DELETE`r`n"
             }
+=======
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
             $lgpoout += "$RegKeyName`r`n"
             $lgpoout += "DELETE`r`n"
             $lgpoout += "`r`n"
@@ -400,6 +422,7 @@ Function Remove-LocalPolicySetting {
 
         If($Force)
         {
+<<<<<<< HEAD
             If($AllValues){
                 Write-Verbose ("{0} :: Force enabled. Removing all registry keys from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath)
                 #verify the registry value has been set
@@ -422,6 +445,17 @@ Function Remove-LocalPolicySetting {
                 }
             }
             
+=======
+            Write-Verbose ("{0} :: Force enabled. Removing registry keys [{1}\{2}\{3}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
+            #verify the registry value has been set
+            Try{
+                Write-Verbose ("{0} :: Removing key name [{2}] at path [{1}]" -f ${CmdletName},($RegHive +'\'+ $RegKeyPath),$RegKeyName)
+                Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction Stop | Out-Null
+            }
+            Catch{
+                Write-Error ("{0} :: Unable to remove registry key [{1}\{2}\{3}]. {4}" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$_.Exception.Message)
+            }
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
         }
     }
     End {
@@ -435,10 +469,17 @@ Function Remove-LocalPolicySetting {
 
 
 ### -----------------------------------
+<<<<<<< HEAD
 ### Set-LocalUserPolicySetting Cmdlet
 ### -----------------------------------
 
 Function Set-LocalUserPolicySetting {
+=======
+### Set-LocalPolicyUserSetting Cmdlet
+### -----------------------------------
+
+Function Set-LocalPolicyUserSetting {
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
     <#
         .SYNOPSIS
         Converts registry key into GPO for user policy
@@ -473,7 +514,11 @@ Function Set-LocalUserPolicySetting {
         Defaults to "C:\ProgramData\LGPO\LGPO.exe". Download LGPO from https://www.microsoft.com/en-us/download/details.aspx?id=55319. Use this to specify alternate location
 
         .EXAMPLE
+<<<<<<< HEAD
         Set-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+=======
+        Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
     #>
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
@@ -636,10 +681,17 @@ Function Set-LocalUserPolicySetting {
 
 
 ### -----------------------------------
+<<<<<<< HEAD
 ### Remove-LocalUserPolicySetting Cmdlet
 ### -----------------------------------
 
 Function Remove-LocalUserPolicySetting {
+=======
+### Remove-LocalPolicyUserSetting Cmdlet
+### -----------------------------------
+
+Function Remove-LocalPolicyUserSetting {
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
     <#
         .SYNOPSIS
         Removes GPO setting on user
@@ -668,7 +720,11 @@ Function Remove-LocalUserPolicySetting {
         Defaults to "C:\ProgramData\LGPO\LGPO.exe". Download LGPO from https://www.microsoft.com/en-us/download/details.aspx?id=55319. Use this to specify alternate location
 
         .EXAMPLE
+<<<<<<< HEAD
         Remove-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter'
+=======
+        Remove-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter'
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
     #>
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
@@ -825,8 +881,13 @@ $exportModuleMemberParams = @{
     Function = @(
         'Set-LocalPolicySetting',
         'Remove-LocalPolicySetting',
+<<<<<<< HEAD
         'Set-LocalUserPolicySetting',
         'Remove-LocalUserPolicySetting'
+=======
+        'Set-LocalPolicyUserSetting',
+        'Remove-LocalPolicyUserSetting'
+>>>>>>> 9d4d8604283d9a25c7f3e27f982a5d40653c8d1e
     )
 }
 
