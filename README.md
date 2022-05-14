@@ -8,25 +8,49 @@ The module does look in the folder c:\ProgramData\LGPO for the LGPO.exe binary.
 The LGPO binaries from Microsoft Security Compliance Toolkit 1.0 will be needed. You can get it from here 'https://www.microsoft.com/en-us/download/details.aspx?id=55319'
 
 ## Cmdlets
- - Set-LocalPolicySetting - Attempts to apply local security policy.
- - Remove-LocalPolicySetting - Attempts to remove local security policy.
- - Set-LocalUserPolicySetting - Defaults to all users. Applies policy to all users
- - Remove-LocalUserPolicySetting - Defaults to all users. removes policy setting for all users
+- Get-LocalPolicySystemSettings - Retrieves all system policies
+- Set-LocalPolicySetting - Attempts to apply local system policy from a registry key
+- Update-LocalPolicySettings - Attempts to update local system policy from a file or data
+- Remove-LocalPolicySetting - Attempts to remove local system policy.
+- Get-LocalPolicyUserSettings - Retrieves all user policies
+- Set-LocalPolicyUserSetting - Defaults to all users. Applies policy to all users
+- Remove-LocalPolicyUserSetting - Defaults to all users. removes policy setting for all users
 
 ## Install
-
+```powershell
+Install-Module LGPO -Force
+Import-Module LGPO
+```
 
 ## Examples
 
 ```powershell
+#gets current policies of system as object
+Get-LocalPolicySystemSettings
+
+#gets current policies of users as object
+Get-LocalPolicyUserSettings
+
+#Sets policy name to system
 Set-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Type DWord -Value 0
 
+#Removed system policy by name (sets to not configured)
 Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience'
 
-Set-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+#Removed system policy by name but ensure it can be set back (set to not configured but also enforces the key from being recreated)
+Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Enforce
 
-Remove-LocalUserPolicySetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
+#Sets policy name to users 
+Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
 
+#Remove policy name for users with verbose output
+Remove-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
+
+# Update (replace) policy from lpo generated txt file
+Update-LocalPolicySettings -Policy Computer -LgpoFile C:\Lgpo.txt
+
+# Filter out policies with * and rebuild
+(Get-LocalPolicySystemSettings -Filter '$_.Name -ne "*"') | Update-LocalPolicySettings -Policy Computer
 ```
 
 ## Validate

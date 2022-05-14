@@ -1,5 +1,11 @@
 # Change log for LGPO module
 
+## 1.0.3.0 May 14, 2022
+
+- Changed cmdlet to LocalPolicyUserSetting; follows module names and mitigates existing module conflicts
+- Changed all argument lists to array; support dynamic changes such as verbose output
+- Added get cmdlets; provides export of system and user policies
+- Changed function of Remove cmdlets; defaults to remove settings without enforcement.
 
 ## 1.0.2.5 May 13, 2022
 
