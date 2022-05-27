@@ -17,6 +17,11 @@ The LGPO binaries from Microsoft Security Compliance Toolkit 1.0 will be needed.
 - Remove-LocalPolicyUserSetting - Defaults to all users. removes policy setting for all users
 
 ## Install
+
+ - Option 1: Run the provided **Install-LGPO.ps1**
+
+ - Option 2: Manually download LGPO bits from 'https://www.microsoft.com/en-us/download/details.aspx?id=55319', copy LGPO.exe to _C:\ProgramData\LGPO_, then install module using commands:
+
 ```powershell
 Install-Module LGPO -Force
 Import-Module LGPO
@@ -40,7 +45,7 @@ Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion
 #Removed system policy by name but ensure it can be set back (set to not configured but also enforces the key from being recreated)
 Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Enforce
 
-#Sets policy name to users 
+#Sets policy name to users
 Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
 
 #Remove policy name for users with verbose output
