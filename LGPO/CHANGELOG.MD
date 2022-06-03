@@ -3,6 +3,8 @@
 ## 1.0.3.3 June 03, 2022
 
 - Fixed force registry parameter for Set-LocalPolicySetting; missing colon for registry hive path on (eg.HKLM:)
+- Fixed pathing issue for LGPO registry keys; missing variable creation in if statement during SID check
+- Added Clear-LocalPolicySettings; always to clear all machine or use policies
 
 ## 1.0.3.2 June 02, 2022
 

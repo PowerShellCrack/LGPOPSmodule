@@ -21,7 +21,7 @@ Write-Host ('Completed policy configuration')
 
 #Get GP report
 $ReportFile = ("gpresult_" + $env:ComputerName + ".html")
-$InstallArguments = "/H $env:Temp\$ReportFile"
+$InstallArguments = "/H $env:Temp\$ReportFile /F"
 Remove-Item $env:Temp -Force -Recurse -ErrorAction SilentlyContinue | Out-Null
 Write-Host ('Running Command: Start-Process -FilePath "GPRESULT" -ArgumentList "{0}" -Wait -Passthru' -f $InstallArguments)
 $Result = Start-Process -FilePath GPRESULT -ArgumentList $InstallArguments -RedirectStandardError "$env:temp\gpresult_error.txt" -RedirectStandardOutput "$env:temp\gpresult_stdout.txt"  -Wait -Passthru -NoNewWindow

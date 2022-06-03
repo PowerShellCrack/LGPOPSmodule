@@ -15,6 +15,7 @@ The LGPO binaries from Microsoft Security Compliance Toolkit 1.0 will be needed.
 - Get-LocalPolicyUserSettings - Retrieves all user policies
 - Set-LocalPolicyUserSetting - Defaults to all users. Applies policy to all users
 - Remove-LocalPolicyUserSetting - Defaults to all users. removes policy setting for all users
+- Clear-LocalPolicySetting - Defaults to all polices. erases all policies from system
 
 ## Install
 
@@ -56,6 +57,13 @@ Update-LocalPolicySettings -Policy Computer -LgpoFile C:\Lgpo.txt
 
 # Filter out policies with * and rebuild
 (Get-LocalPolicySystemSettings -Filter '$_.Name -ne "*"') | Update-LocalPolicySettings -Policy Computer
+
+# Clear all policies with confirmation
+Clear-LocalPolicySetting
+
+# Clear computer policies without confirmation
+Clear-LocalPolicySetting -Policy Computer -Confirm:$False
+
 ```
 
 ## Validate

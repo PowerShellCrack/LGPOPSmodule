@@ -543,7 +543,7 @@ Function Set-LocalPolicySetting {
         $RegKeyHive = ($RegPath).Split('\')[0].TrimEnd(':')
 
         #Convert RegKeyHive to LGPO compatible variables
-        Switch -wildcard ($RegKeyHive){
+        Switch ($RegKeyHive){
             HKEY_LOCAL_MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
             MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
             HKLM {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
@@ -577,6 +577,7 @@ Function Set-LocalPolicySetting {
         Write-Verbose ("{0} : Parsing registry [Hive = '{1}', Path = '{2}', Name = '{3}', Value = '{4}', Type = '{5}']" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$Value,$LGPORegType)
 
         #Remove the Username or SID from Registry key path for LGPO to process properly
+        $LGPORegKeyPath = $RegKeyPath
         If($LGPOHive -eq 'User'){
             $UserID = $RegKeyPath.Split('\')[0]
             If($UserID -match "DEFAULT|S-1-5-21-(\d+-?){4}$"){
@@ -640,7 +641,7 @@ Function Set-LocalPolicySetting {
         If($Force -eq $true)
         {
             #rebuild full path with hive
-            $RegPath = ($RegKeyHive +'\'+ $RegKeyPath)
+            $RegPath = ($RegHive +'\'+ $RegKeyPath)
 
             Write-Verbose ("{0} : Force enabled. Hard coding registry key..." -f ${CmdletName})
             #verify the registry value has been set
@@ -774,10 +775,11 @@ Function Remove-LocalPolicySetting {
     Process
     {
         #Attempt to get the key hive from registry path
+        #Attempt to get the key hive from registry path
         $RegKeyHive = ($RegPath).Split('\')[0].TrimEnd(':')
 
         #Convert RegKeyHive to LGPO compatible variables
-        Switch -wildcard ($RegKeyHive){
+        Switch ($RegKeyHive){
             HKEY_LOCAL_MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
             MACHINE {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
             HKLM {$LGPOHive = 'Computer';$RegHive = 'HKLM:';$RegKeyPath = ($RegPath).Split('\',2)[1]}
@@ -802,6 +804,7 @@ Function Remove-LocalPolicySetting {
         Write-Verbose ("{0} : Parsing registry [Hive = '{1}', Path = '{2}', Name = '{3}', Value = '{4}', Type = '{5}']" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$Value,$LGPORegType)
 
         #Remove the Username or SID from Registry key path
+        $LGPORegKeyPath = $RegKeyPath
         If($LGPOHive -eq 'User'){
             $UserID = $RegKeyPath.Split('\')[0]
             If($UserID -match "DEFAULT|S-1-5-21-(\d+-?){4}$"){
@@ -1364,13 +1367,78 @@ Function Remove-LocalPolicyUserSetting {
             }
         }
         Else{
-            Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce  -WhatIf:$WhatIfPreference" -f ${CmdletName})
-            Remove-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce  -WhatIf:$WhatIfPreference
+            Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference" -f ${CmdletName})
+            Remove-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference
         }
 
     }
     End {
 
+    }
+}
+
+
+Function Clear-LocalPolicySettings{
+    [CmdletBinding(
+        SupportsShouldProcess,
+        ConfirmImpact = 'High'
+    )]
+    param(
+        [Parameter(Mandatory=$false,Position=1)]
+        [ValidateSet('Machine','Computer','User')]
+        $Policy,
+        $Force
+    )
+    Begin
+    {
+        ## Get the name of this function
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+        if (-not $PSBoundParameters.ContainsKey('Verbose')) {
+            $VerbosePreference = $PSCmdlet.SessionState.PSVariable.GetValue('VerbosePreference')
+        }
+
+        if (-not $PSBoundParameters.ContainsKey('Confirm')) {
+            $ConfirmPreference = $PSCmdlet.SessionState.PSVariable.GetValue('ConfirmPreference')
+        }
+        if (-not $PSBoundParameters.ContainsKey('WhatIf')) {
+            $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
+        }
+
+        $PolicyPaths = @()
+    }
+    Process
+    {
+        If($Policy){
+            switch($Policy){
+                'Machine' {$PolicyPaths += 'Machine';$GPTarget='Computer'}
+                'Computer' {$PolicyPaths += 'Machine';$GPTarget='Computer'}
+                'User' {$PolicyPaths += 'User';$GPTarget='User'}
+            }
+        }
+        Else{
+            $GPTarget='All'
+            $PolicyPaths += 'Machine'
+            $PolicyPaths += 'User'
+        }
+
+        if ($PSCmdlet.ShouldProcess(($PolicyPaths -join ','))){
+            Foreach($PolicyPath in $PolicyPaths){
+                Write-Verbose ("{0} : Removing local settings for [{1}]" -f ${CmdletName},$PolicyPath)
+
+                Remove-Item "$env:Windir\System32\GroupPolicy\$PolicyPath\Registry.pol" -Force -WhatIf:$WhatIfPreference -ErrorAction SilentlyContinue | Out-Null
+            }
+        }
+    }
+    End{
+        If($GPTarget -eq 'All'){
+            $GPArgument = '/Force'
+        }
+        Else{
+            $GPArgument = "/Target:$GPTarget /Force"
+        }
+        Write-Verbose ("{0} : RUNNING COMMAND: Start-Process -FilePath `"gpupdate`" -ArgumentList `"$GPArgument`" -Wait -PassThru -WindowStyle Hidden" -f ${CmdletName})
+        Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
     }
 }
 
@@ -1382,7 +1450,8 @@ $exportModuleMemberParams = @{
         'Remove-LocalPolicySetting',
         'Get-LocalPolicyUserSettings',
         'Set-LocalPolicyUserSetting',
-        'Remove-LocalPolicyUserSetting'
+        'Remove-LocalPolicyUserSetting',
+        'Clear-LocalPolicySettings'
     )
 }
 
