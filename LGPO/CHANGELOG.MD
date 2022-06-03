@@ -2,7 +2,7 @@
 
 ## 1.0.3.3 June 03, 2022
 
-- Fixed force registry parameter for set-localpolicy settings; missing colon for registry hive path on (eg.HKLM:)
+- Fixed force registry parameter for Set-LocalPolicySetting; missing colon for registry hive path on (eg.HKLM:)
 
 ## 1.0.3.2 June 02, 2022
 
