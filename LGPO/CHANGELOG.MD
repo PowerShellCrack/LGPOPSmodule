@@ -1,5 +1,9 @@
 # Change log for LGPO module
 
+## 1.0.3.3 June 03, 2022
+
+- Fixed force registry parameter for set-localpolicy settings; missing colon for registry hive path on (eg.HKLM:)
+
 ## 1.0.3.2 June 02, 2022
 
 - Changed NoNewWindow to WindowStyle Hidden; hides LGPO popup
