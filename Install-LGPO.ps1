@@ -1,10 +1,24 @@
-﻿#=======================================================
-# VARIABLES
+﻿<#
+.LINK
+https://www.microsoft.com/en-us/download/details.aspx?id=55319
+#>
+Param(
+    [ValidateSet('Internet','Blob','SMBShare')]
+    [string]$SourceType = 'Internet',
+    [string]$BlobURI,
+    [string]$BlobSaSKey,
+    [string]$SharePath,
+    [string]$InternetURI = 'https://download.microsoft.com/download/8/5/C/85C25433-A1B0-4FFA-9429-7E023E7DA8D8/LGPO.zip',
+    [switch]$UseProxy,
+    [string]$proxyURI
+)
 #=======================================================
-$LocalLGPOpath = "$Env:ALLUSERSPROFILE\LGPO"
-$LGPOURI = 'https://download.microsoft.com/download/8/5/C/85C25433-A1B0-4FFA-9429-7E023E7DA8D8/LGPO.zip'
-
-
+# CONSTANT VARIABLES
+#=======================================================
+$ErrorActionPreference = "Stop"
+$Localpath = "$Env:ALLUSERSPROFILE\LGPO"
+$Installer = 'LGPO.zip
+'
 ##*=============================================
 ##* Runtime Function - REQUIRED
 ##*=============================================
@@ -231,6 +245,7 @@ Function Write-LogEntry{
         }
     }
 }
+
 ##*========================================================================
 ##* VARIABLE DECLARATION
 ##*========================================================================
@@ -242,30 +257,78 @@ Function Write-LogEntry{
 #specify path of log
 $Global:LogFilePath = "$env:Windir\Logs\$($scriptName)_$(Get-Date -Format 'yyyy-MM-dd_Thh-mm-ss-tt').log"
 
+If($UseProxy){
+    [system.net.webrequest]::defaultwebproxy = new-object system.net.webproxy($proxyURI)
+    [system.net.webrequest]::defaultwebproxy.credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+    [system.net.webrequest]::defaultwebproxy.BypassProxyOnLocal = $true
+}Else{
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+}
+
 #=======================================================
 # MAIN
 #=======================================================
-#Test/Create Temp Directory
-if((Test-Path $LocalLGPOpath) -eq $false) {
-    Write-LogEntry -Message ('Creating LGPO directory [{0}]' -f $LocalLGPOpath) -Passthru
-    New-Item -Path $LocalLGPOpath -ItemType Directory -Force -ErrorAction SilentlyContinue
+Try{
+    #Test/Create LGPO Directory
+    if((Test-Path $Localpath) -eq $false) {
+        Write-LogEntry -Message ('Creating LGPO directory [{0}]' -f $Localpath) -Passthru
+        New-Item -Path $Localpath -ItemType Directory -Force -ErrorAction SilentlyContinue
+    }
+}
+Catch{
+    Write-LogEntry -Message ('Unable to create directory [{0}]. {1}' -f $Localpath, $_.Exception.message) -Severity 3
+    Break
 }
 
-# Download FSlogix
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Write-LogEntry -Message ('Downloading FSLogix from URL [{0}]' -f $LGPOURI) -Passthru
-Invoke-WebRequest -Uri $LGPOURI -OutFile "$LocalLGPOpath\LGPO.zip"
+# Download LGPO
+Try{
+    If( ($SourceType -eq 'Blob') -and $BlobURI -and $SaSKey){
+        <# TEST
+        $BlobUri='https://avdimageresources.blob.core.usgovcloudapi.net/apps/LGPO.zip'
+        $SasKey = '?sv=2020-08-04&ss=bfqt&srt=sc&sp=rwdlacuptfx&se=2022-06-02T09:31:43Z&st=2022-06-02T01:31:43Z&sip=192.168.21.5&spr=https&sig=oyjNnYQZbhDONw%2BzgtKN63Pcrehwl%2BMRDS6yJKTvv7o%3D'
+        #>
+        #Download via URI using SAS
+        Write-LogEntry -Message ('Downloading LGPO from Blob [{0}]' -f "$BlobUri") -Passthru
+        (New-Object System.Net.WebClient).DownloadFile("$BlobUri$SasKey", "$Localpath\$Installer")
+    }
+    ElseIf(($SourceType -eq 'SMBShare') -and $SharePath){
+        Write-LogEntry -Message ('Downloading LGPO from share [{0}]' -f "$SharePath") -Passthru
+        Copy-Item $SharePath -Destination "$Localpath\$Installer" -Force
+    }
+    Else{
+        Write-LogEntry -Message ('Downloading LGPO from URL [{0}]' -f $InternetURI) -Passthru
+        Invoke-WebRequest -Uri $InternetURI -OutFile "$Localpath\$Installer"
+    }
+}
+Catch{
+    Write-LogEntry -Message ('Unable to download LGPO. {0}' -f $_.Exception.message) -Severity 3
+    Break
+}
 
-# Extract FSLogix Files
-Write-LogEntry -Message ('Unzipping LGPO file [{0}]' -f "$LocalLGPOpath\LGPO.zip") -Passthru
-Expand-Archive -LiteralPath "$LocalLGPOpath\LGPO.zip" -DestinationPath $LocalLGPOpath -Force -Verbose
+# Extract LGPO Files
+Write-LogEntry -Message ('Unzipping LGPO file [{0}]' -f "$Localpath\$Installer") -Passthru
+Expand-Archive -LiteralPath "$Localpath\$Installer" -DestinationPath $Localpath -Force -Verbose
 
 #prepare Directory
-$LGPOFile = Get-ChildItem $LocalLGPOpath -Recurse -Filter LGPO.exe
-$LGPOFile | Move-Item -Destination $LocalLGPOpath -Force
-Remove-Item "$LocalLGPOpath\LGPO.zip" -Force -ErrorAction SilentlyContinue
+$LGPOFile = Get-ChildItem $Localpath -Recurse -Filter LGPO.exe
+$LGPOFile | Move-Item -Destination $Localpath -Force
+Remove-Item "$Localpath\$Installer" -Force -ErrorAction SilentlyContinue
 
-Write-LogEntry -Message ('Install LGPO module') -Passthru
-Install-Module LGPO -Force -ErrorAction SilentlyContinue
+try{
+    Write-LogEntry -Message ('Installing NuGet package dependency') -Passthru
+    Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -ErrorAction Stop
+}Catch{
+    Write-LogEntry -Message ('Unable to install nuget package. {0}' -f $_.Exception.message) -Severity 3
+    Break
+}
+
+try{
+    Write-LogEntry -Message ('Installing LGPO module') -Passthru
+    Install-Module LGPO -Force -ErrorAction Stop
+}Catch{
+    Write-LogEntry -Message ('Unable to install LGPO module. {0}' -f $_.Exception.message) -Severity 3
+    Break
+}
+
 
 Write-LogEntry -Message ('Completed LGPO install') -Passthru

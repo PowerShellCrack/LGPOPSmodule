@@ -46,10 +46,10 @@ Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion
 Remove-LocalPolicySetting -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell' -Name 'UseActionCenterExperience' -Enforce
 
 #Sets policy name to users
-Set-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
+Set-LocalPolicyUserSetting -RegPath 'HCKU:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Type DWord -Value 1
 
 #Remove policy name for users with verbose output
-Remove-LocalPolicyUserSetting -RegPath 'SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
+Remove-LocalPolicyUserSetting -RegPath 'HCKU:\SOFTWARE\Policies\Microsoft\Windows\Explorer' -Name 'DisableNotificationCenter' -Verbose
 
 # Update (replace) policy from lpo generated txt file
 Update-LocalPolicySettings -Policy Computer -LgpoFile C:\Lgpo.txt

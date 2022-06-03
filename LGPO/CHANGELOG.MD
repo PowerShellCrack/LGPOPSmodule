@@ -1,5 +1,10 @@
 # Change log for LGPO module
 
+## 1.0.3.2 June 02, 2022
+
+- Changed NoNewWindow to WindowStyle Hidden; hides LGPO popup
+- Fixed user policy cmdlet; unable to use force beacuse of key pathing issues
+
 ## 1.0.3.1 May 26, 2022
 
 - Fixed Remove-LocalPolicySetting cmdlet; changed force parameter to Enforce
