@@ -1049,20 +1049,20 @@ Function Set-LocalPolicyUserSetting {
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     Param (
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory=$true,Position=1)]
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$true,Position=1)]
+        [Parameter(Mandatory=$true,Position=2)]
         [Alias("v")]
         [string]$Name,
 
-        [Parameter(Mandatory=$false,Position=2)]
+        [Parameter(Mandatory=$false,Position=3)]
         [ValidateSet('None','String','Binary','DWord','ExpandString','MultiString','QWord')]
         [Alias("PropertyType","t")]
         [string]$Type = 'DWord',
 
-        [Parameter(Mandatory=$false,Position=3)]
+        [Parameter(Mandatory=$false,Position=4)]
         [Alias("d")]
         $Value,
 
@@ -1241,11 +1241,11 @@ Function Remove-LocalPolicyUserSetting {
 
     [CmdletBinding(SupportsShouldProcess, ConfirmImpact='Medium')]
     Param (
-        [Parameter(Mandatory=$true,Position=0)]
+        [Parameter(Mandatory=$true,Position=1)]
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$false,Position=1)]
+        [Parameter(Mandatory=$false,Position=2)]
         [Alias("v")]
         [string]$Name,
 
