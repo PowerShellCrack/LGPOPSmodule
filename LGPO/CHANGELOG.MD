@@ -1,5 +1,16 @@
 # Change log for LGPO module
 
+## 1.0.3.5 June 11, 2022
+
+- Fixed issue where running Set-LocalPolicyUserSetting with HKLM in path still applies to user. Should error with message
+- Changed some write-error to throw to ensure terminating; updated string to create new line for download link
+- Updated Get-LocalPolicySettings to look for lgpo path as default instead of forced
+
+## 1.0.3.4 June 05, 2022
+
+- updated position parameter from 0 to 1; mistake on listed as first parameter
+- updated module tags to reflect usage and search in gallery
+
 ## 1.0.3.3 June 03, 2022
 
 - Fixed force registry parameter for Set-LocalPolicySetting; missing colon for registry hive path on (eg.HKLM:)
@@ -9,14 +20,14 @@
 ## 1.0.3.2 June 02, 2022
 
 - Changed NoNewWindow to WindowStyle Hidden; hides LGPO popup
-- Fixed user policy cmdlet; unable to use force beacuse of key pathing issues
+- Fixed user policy cmdlet; unable to use force because of key pathing issues
 
 ## 1.0.3.1 May 26, 2022
 
 - Fixed Remove-LocalPolicySetting cmdlet; changed force parameter to Enforce
 - Change error output with Write-Error; cleaned up output
 - Added Machine to policy parameter to support calls to policy for local system
-- Fixed Remove-LocalPolicyUserSetting cmdlet; ensured if no name is specified it remvoed all values for path
+- Fixed Remove-LocalPolicyUserSetting cmdlet; ensured if no name is specified it removed all values for path
 
 ## 1.0.3.0 May 14, 2022
 
