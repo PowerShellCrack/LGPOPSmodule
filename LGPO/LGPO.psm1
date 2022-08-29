@@ -468,7 +468,7 @@ Function Set-LocalPolicySetting {
         .PARAMETER Value
         Specify value or Key name
 
-        .PARAMETER Force
+        .PARAMETER Enforce
         If LGPO failed, this will set the registry item anyway
 
         .PARAMETER LGPOBinaryPath
@@ -513,7 +513,7 @@ Function Set-LocalPolicySetting {
 
         [Parameter(Mandatory=$false)]
         [Alias("f")]
-        [switch]$Force,
+        [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
         [ValidateScript({Test-path $_ -PathType Leaf})]
@@ -539,6 +539,10 @@ Function Set-LocalPolicySetting {
 
         if (-not $PSBoundParameters.ContainsKey('Debug')) {
             $DebugPreference = $PSCmdlet.SessionState.PSVariable.GetValue('DebugPreference')
+        }
+
+        if (-not $PSBoundParameters.ContainsKey('Enforce')) {
+            $Enforce = $false
         }
     }
     Process
@@ -663,7 +667,7 @@ Function Set-LocalPolicySetting {
 
             Try{
                 Write-Verbose ("{0} : Setting key name [{2}] at path [{1}] with value [{3}]" -f ${CmdletName},$RegPath,$RegKeyName,$Value)
-                Set-ItemProperty -Path $RegPath -Name $RegKeyName -Value $Value -Force:$Force -WhatIf:$WhatIfPreference -ErrorAction Stop
+                Set-ItemProperty -Path $RegPath -Name $RegKeyName -Value $Value -Force -WhatIf:$WhatIfPreference -ErrorAction Stop
             }
             Catch{
                 Write-Error ("Unable to set registry key [{2}={3}] in path [{1}]. {4}" -f ${CmdletName},$RegPath,$RegKeyName,$Value,$_.Exception.Message)
@@ -754,7 +758,6 @@ Function Remove-LocalPolicySetting {
         [Parameter(Mandatory=$false,HelpMessage="Default path is 'C:\ProgramData\LGPO\LGPO.exe. If this does not exists you must specify path")]
         [ValidateScript({Test-path $_ -PathType Leaf})]
         $LGPOBinaryPath = "$env:ALLUSERSPROFILE\LGPO\LGPO.exe"
-
     )
     Begin
     {
@@ -775,6 +778,10 @@ Function Remove-LocalPolicySetting {
 
         if (-not $PSBoundParameters.ContainsKey('Debug')) {
             $DebugPreference = $PSCmdlet.SessionState.PSVariable.GetValue('DebugPreference')
+        }
+        #set boolean value
+        if (-not $PSBoundParameters.ContainsKey('Enforce')) {
+            $Enforce = $false
         }
     }
     Process
@@ -875,6 +882,27 @@ Function Remove-LocalPolicySetting {
                         Write-Error ("LGPO failed to run. {0}" -f $result.ExitCode)
                     }
                 }
+
+                #rebuild full path with hive
+                $RegPath = ($RegHive +'\'+ $RegKeyPath)
+
+                If($AllValues){
+                    $VerboseMsg = ("{0} : Enforce enabled. Removing all registry keys from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath)
+                    $ErrorMsg = ("{0} : Unable to remove registry keys from [{1}\{2}]. {3}" -f ${CmdletName},$RegHive,$RegKeyPath,$_.Exception.Message)
+                }
+                Else{
+                    $VerboseMsg = ("{0} : Enforce enabled. Removing registry key [{3}] from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
+                    $ErrorMsg = ("{0} : Unable to remove registry key [{1}\{2}\{3}]. {4}" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$_.Exception.Message)
+                }
+
+                Write-Verbose $VerboseMsg
+                #verify the registry value has been set
+                Try{
+                    Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction SilentlyContinue
+                }
+                Catch{
+                    Write-Error $ErrorMsg
+                }
             }
             Else{
 
@@ -892,30 +920,6 @@ Function Remove-LocalPolicySetting {
                 }
                 Catch{
                     Write-Error ("LGPO failed to run. {1}" -f ${CmdletName},$_.Exception.Message)
-                }
-                Finally{
-                    #rebuild full path with hive
-                    $RegPath = ($RegHive +'\'+ $RegKeyPath)
-
-                    IF( $PSBoundParameters.ContainsKey('Enforce') ){
-                        If($AllValues){
-                            $VerboseMsg = ("{0} : Force enabled. Removing all registry keys from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath)
-                            $ErrorMsg = ("{0} : Unable to remove registry keys from [{1}\{2}]. {3}" -f ${CmdletName},$RegHive,$RegKeyPath,$_.Exception.Message)
-                        }
-                        Else{
-                            $VerboseMsg = ("{0} : Force enabled. Removing registry key [{3}] from [{1}\{2}]" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName)
-                            $ErrorMsg = ("{0} : Unable to remove registry key [{1}\{2}\{3}]. {4}" -f ${CmdletName},$RegHive,$RegKeyPath,$RegKeyName,$_.Exception.Message)
-                        }
-
-                        Write-Verbose $VerboseMsg
-                        #verify the registry value has been set
-                        Try{
-                            Remove-ItemProperty -Path $RegPath -Name $RegKeyName -Force -WhatIf:$WhatIfPreference -ErrorAction SilentlyContinue
-                        }
-                        Catch{
-                            Write-Error $ErrorMsg
-                        }
-                    }
                 }
             }
 
@@ -1046,7 +1050,7 @@ Function Set-LocalPolicyUserSetting {
         .PARAMETER Value
         Specify value or Key name
 
-        .PARAMETER Force
+        .PARAMETER Enforce
         If LGPO failed, this will set the registry item anyway
 
         .PARAMETER LGPOBinaryPath
@@ -1086,7 +1090,7 @@ Function Set-LocalPolicyUserSetting {
 
         [Parameter(Mandatory=$false)]
         [Alias("f")]
-        [switch]$Force,
+        [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
         [ValidateScript({Test-path $_ -PathType Leaf})]
@@ -1107,7 +1111,9 @@ Function Set-LocalPolicyUserSetting {
         if (-not $PSBoundParameters.ContainsKey('WhatIf')) {
             $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
         }
-
+        if (-not $PSBoundParameters.ContainsKey('Enforce')) {
+            $Enforce = $false
+        }
 
         # Get each user profile SID and Path to the profile
         $AllProfiles = Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*" | Where-Object {$_.PSChildName -match "S-1-5-21-(\d+-?){4}$" } |
@@ -1132,29 +1138,23 @@ Function Set-LocalPolicyUserSetting {
     Process
     {
         #grab the hive from the regpath
-        $RegHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
+        $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
 
         #check if hive is local machine.
         If($RegHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
-            Throw ("Registry path [{1}] is not a user path. Use ' Set-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegHive)
+            Throw ("Registry path [{1}] is not a user path. Use ' Set-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegKeyHive)
         }
 
         #detect if first values has hive; otherwise assume allusers
-        If( -Not(Test-Path "$($RegHive):" -PathType Container) ){
+        If( -Not(Test-Path "$($RegKeyHive):" -PathType Container) ){
             $RegHive = 'HKCU'
             $RegKeyPath = $RegPath
         }
 
-        #if Name not specified, grab last value from full path
-        If($PSBoundParameters.ContainsKey('Name')){
-            $RegKeyPath = ($RegPath).Split('\',2)[1]
-            $RegKeyName = $Name
-        }
-        Else{
-            $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
-            $RegKeyName = ($RegPath).Split('\')[-1]
-        }
-
+        #Break down registry to get path
+        $RegKeyPath = ($RegPath).Split('\',2)[1]
+        $RegKeyName = $Name
+        
         #Grab user keys and profiles based on whom it will be applied to
         Switch($ApplyTo){
             'AllUsers'      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
@@ -1162,6 +1162,7 @@ Function Set-LocalPolicyUserSetting {
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
             default      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
+        Write-Verbose ("Setting Registry hive from [{0}] to [{0}]" -f  $RegKeyHive,$RegHive)
 
         #loop through profiles as long as the hive is not the current user hive
         If($RegHive -notmatch 'HKCU|HKEY_CURRENT_USER'){
@@ -1186,8 +1187,8 @@ Function Set-LocalPolicyUserSetting {
                 }
 
                 If ($HiveLoaded -eq $true) {
-                    Write-Verbose ("{0} : RUNNING CMDLET: Set-LocalPolicySetting -Path `"$RegHive\$($UserProfile.SID)\$RegKeyPath`" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference" -f ${CmdletName})
-                    Set-LocalPolicySetting -Path "$RegHive\$($UserProfile.SID)\$RegKeyPath" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Force:$Force -WhatIf:$WhatIfPreference
+                    Write-Verbose ("{0} : RUNNING CMDLET: Set-LocalPolicySetting -Path `"$RegHive\$($UserProfile.SID)\$RegKeyPath`" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference" -f ${CmdletName})
+                    Set-LocalPolicySetting -Path "$RegHive\$($UserProfile.SID)\$RegKeyPath" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference
                 }
 
                 #remove any leftover reg process and then remove hive
@@ -1200,8 +1201,8 @@ Function Set-LocalPolicyUserSetting {
             }
         }
         Else{
-            Write-Verbose ("{0} : RUNNING CMDLET: Set-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce  -WhatIf:$WhatIfPreference" -f ${CmdletName})
-            Set-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Force:$Force -WhatIf:$WhatIfPreference
+            Write-Verbose ("{0} : RUNNING CMDLET: Set-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference" -f ${CmdletName})
+            Set-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference
         }
 
     }
@@ -1234,7 +1235,7 @@ Function Remove-LocalPolicyUserSetting {
         .PARAMETER ApplyTo
         Defaults to AllUsers. Specify either defaultuser or CurrentUser
 
-        .PARAMETER Force
+        .PARAMETER Enforce
         If LGPO failed, this will remove the registry item anyway
 
         .PARAMETER LGPOBinaryPath
@@ -1265,7 +1266,7 @@ Function Remove-LocalPolicyUserSetting {
 
         [Parameter(Mandatory=$false)]
         [Alias("f")]
-        [switch]$EnForce,
+        [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
         [ValidateScript({Test-path $_ -PathType Leaf})]
@@ -1285,6 +1286,10 @@ Function Remove-LocalPolicyUserSetting {
         }
         if (-not $PSBoundParameters.ContainsKey('WhatIf')) {
             $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
+        }
+        #set boolean value
+        if (-not $PSBoundParameters.ContainsKey('Enforce')) {
+            $Enforce = $False
         }
 
         # Get each user profile SID and Path to the profile
@@ -1310,14 +1315,15 @@ Function Remove-LocalPolicyUserSetting {
     Process
     {
         #grab the hive from the regpath
-        $RegHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
+        $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
+
         #check if hive is local machine.
         If($RegHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
-            Throw ("Registry path [{1}] is not a user path. Use 'Remove-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegHive)
+            Throw ("Registry path [{1}] is not a user path. Use ' Set-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegKeyHive)
         }
 
         #detect if first values has hive; otherwise assume allusers
-        If( -Not(Test-Path "$($RegHive):" -PathType Container) ){
+        If( -Not(Test-Path "$($RegKeyHive):" -PathType Container) ){
             $RegHive = 'HKCU'
             $RegKeyPath = $RegPath
         }
@@ -1328,6 +1334,7 @@ Function Remove-LocalPolicyUserSetting {
             $RegKeyName = $Name
         }
         Else{
+            Write-Verbose ("Spliting path [{0}]. Assuming last item is key name" -f $RegPath)
             $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
             $RegKeyName = ($RegPath).Split('\')[-1]
         }
@@ -1337,8 +1344,9 @@ Function Remove-LocalPolicyUserSetting {
             'AllUsers'      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
             'CurrentUser'   {$RegHive = 'HKCU'      ; $ProfileList = ($UserProfiles | Where-Object{$_.SID -eq $CurrentSID})}
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
-            default         {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
+            default      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
+        Write-Verbose ("Setting Registry hive from [{0}] to [{0}]" -f  $RegKeyHive,$RegHive)
 
         #loop through profiles as long as the hive is not the current user hive
         If($RegHive -notmatch 'HKCU|HKEY_CURRENT_USER'){
@@ -1363,8 +1371,8 @@ Function Remove-LocalPolicyUserSetting {
                 }
 
                 If ($HiveLoaded -eq $true) {
-                    Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$($UserProfile.SID)\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference" -f ${CmdletName})
-                    Remove-LocalPolicySetting -Path "$RegHive\$($UserProfile.SID)\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference
+                    Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$($UserProfile.SID)\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference" -f ${CmdletName})
+                    Remove-LocalPolicySetting -Path "$RegHive\$($UserProfile.SID)\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference
                 }
 
                 #remove any leftover reg process and then remove hive
@@ -1377,8 +1385,8 @@ Function Remove-LocalPolicyUserSetting {
             }
         }
         Else{
-            Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference" -f ${CmdletName})
-            Remove-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -EnForce:$EnForce -WhatIf:$WhatIfPreference
+            Write-Verbose ("{0} : RUNNING CMDLET: Remove-LocalPolicySetting -Path `"$RegHive\$RegKeyPath`" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference" -f ${CmdletName})
+            Remove-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference
         }
 
     }
@@ -1396,8 +1404,7 @@ Function Clear-LocalPolicySettings{
     Param (
         [Parameter(Mandatory=$false,Position=1)]
         [ValidateSet('Machine','Computer','User')]
-        $Policy,
-        $Force
+        $Policy
     )
     Begin
     {

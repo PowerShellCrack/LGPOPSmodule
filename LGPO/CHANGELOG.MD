@@ -7,6 +7,7 @@
 - Updated Get-LocalPolicySettings to look for lgpo path as default instead of forced
 - Fixed name not found for Set-LocalUserPolicySetting; Apply to wasn't writing correct path and name
 - Removed test sample data from module.
+- Fixed enforce boolean value
 
 ## 1.0.3.4 June 05, 2022
 
