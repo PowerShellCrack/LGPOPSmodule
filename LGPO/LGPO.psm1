@@ -57,9 +57,6 @@ Function Get-LocalPolicySettings {
         [string]$Filter,
 
         [Parameter(Mandatory=$false)]
-        [String]$ExportAsFile,
-
-        [Parameter(Mandatory=$false)]
         [ValidateScript({Test-path $_ -PathType Leaf})]
         $LGPOBinaryPath = "$env:ALLUSERSPROFILE\LGPO\LGPO.exe"
     )
@@ -498,7 +495,7 @@ Function Set-LocalPolicySetting {
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$true,Position=2)]
+        [Parameter(Mandatory=$true,Position=2,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [Alias("v")]
         [string]$Name,
 
@@ -512,7 +509,7 @@ Function Set-LocalPolicySetting {
         $Value,
 
         [Parameter(Mandatory=$false)]
-        [Alias("f")]
+        [Alias("f",'Force')]
         [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
@@ -743,7 +740,7 @@ Function Remove-LocalPolicySetting {
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$true,Position=2,ParameterSetName="name")]
+        [Parameter(Mandatory=$true,Position=2,ParameterSetName="name",ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [Alias("v")]
         [string]$Name,
 
@@ -752,7 +749,7 @@ Function Remove-LocalPolicySetting {
         [switch]$AllValues,
 
         [Parameter(Mandatory=$false)]
-        [Alias("f")]
+        [Alias("f",'Force')]
         [switch]$Enforce,
 
         [Parameter(Mandatory=$false,HelpMessage="Default path is 'C:\ProgramData\LGPO\LGPO.exe. If this does not exists you must specify path")]
@@ -1070,7 +1067,7 @@ Function Set-LocalPolicyUserSetting {
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$true,Position=2)]
+        [Parameter(Mandatory=$true,Position=2,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [Alias("v")]
         [string]$Name,
 
@@ -1089,7 +1086,7 @@ Function Set-LocalPolicyUserSetting {
         [string]$ApplyTo,
 
         [Parameter(Mandatory=$false)]
-        [Alias("f")]
+        [Alias("f",'Force')]
         [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
@@ -1162,7 +1159,7 @@ Function Set-LocalPolicyUserSetting {
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
             default      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
-        Write-Verbose ("Setting Registry hive from [{0}] to [{0}]" -f  $RegKeyHive,$RegHive)
+        Write-Verbose ("Setting Registry hive from [{0}] to [{1}]" -f  $RegKeyHive,$RegHive)
 
         #loop through profiles as long as the hive is not the current user hive
         If($RegHive -notmatch 'HKCU|HKEY_CURRENT_USER'){
@@ -1255,7 +1252,7 @@ Function Remove-LocalPolicyUserSetting {
         [Alias("Path")]
         [string]$RegPath,
 
-        [Parameter(Mandatory=$false,Position=2)]
+        [Parameter(Mandatory=$false,Position=2,ValueFromPipeline=$true,ValueFromPipelineByPropertyName=$true)]
         [Alias("v")]
         [string]$Name,
 
@@ -1265,7 +1262,7 @@ Function Remove-LocalPolicyUserSetting {
         [string]$ApplyTo = 'AllUsers',
 
         [Parameter(Mandatory=$false)]
-        [Alias("f")]
+        [Alias("f",'Force')]
         [switch]$Enforce,
 
         [Parameter(Mandatory=$false)]
@@ -1346,7 +1343,7 @@ Function Remove-LocalPolicyUserSetting {
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
             default      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
-        Write-Verbose ("Setting Registry hive from [{0}] to [{0}]" -f  $RegKeyHive,$RegHive)
+        Write-Verbose ("Setting Registry hive from [{0}] to [{1}]" -f  $RegKeyHive,$RegHive)
 
         #loop through profiles as long as the hive is not the current user hive
         If($RegHive -notmatch 'HKCU|HKEY_CURRENT_USER'){
