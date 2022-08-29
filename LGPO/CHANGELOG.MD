@@ -1,10 +1,12 @@
 # Change log for LGPO module
 
-## 1.0.3.5 June 11, 2022
+## 1.0.3.5 August 29, 2022
 
 - Fixed issue where running Set-LocalPolicyUserSetting with HKLM in path still applies to user. Should error with message
 - Changed some write-error to throw to ensure terminating; updated string to create new line for download link
 - Updated Get-LocalPolicySettings to look for lgpo path as default instead of forced
+- Fixed name not found for Set-LocalUserPolicySetting; Apply to wasn't writing correct path and name
+- Removed test sample data from module.
 
 ## 1.0.3.4 June 05, 2022
 

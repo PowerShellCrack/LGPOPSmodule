@@ -474,7 +474,7 @@ Function Set-LocalPolicySetting {
         .PARAMETER LGPOBinaryPath
         Use this to specify alternate location
         Defaults to "C:\ProgramData\LGPO\LGPO.exe". Download LGPO from https://www.microsoft.com/en-us/download/details.aspx?id=55319.
-        
+
         .EXAMPLE
         Set-LocalPolicySetting -Path 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'TaskbarMn' -Type DWord -Value 0
 
@@ -543,13 +543,6 @@ Function Set-LocalPolicySetting {
     }
     Process
     {
-        <#TEST SAMPLE
-        $RegPath='HKLM\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='Registry::HKEY_USERS\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='HKCU:\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='software\policies\microsoft\office\16.0\outlook\cached mode'
-        $Name='enable';$Type='DWord';$Value=1;$ApplyTo='AllUsers';$Force=$true
-        #>
         #Attempt to get the key hive from registry path
         $RegKeyHive = ($RegPath).Split('\')[0].TrimEnd(':')
 
@@ -829,9 +822,6 @@ Function Remove-LocalPolicySetting {
         {
             If($Enforce -eq $true){
                 # build a unique output file
-                <# TEST SAMPLE
-                $LgpoFileName = 'LGPO-Set-HKEY_USERS\Registry::HKEY_USER\S-S-1-5-21-748411717-568772137-1603165583-500\software\policies\microsoft\office\16.0\outlook-cachedmode-enable.lgpo'
-                #>
                 If($AllValues){
                     $LgpoFileName = ('LGPO-Set-{0}-{1}-All-Keys' -f $RegKeyHive,$LGPORegKeyPath) -replace 'Registry::','' -replace '[\W_]','-'
                 }
@@ -887,8 +877,6 @@ Function Remove-LocalPolicySetting {
                 }
             }
             Else{
-                #TEST (Get-LocalPolicySystemSettings -Filter '$_.Name -ne "*"')
-                #TEST $LgpoData | where{$_.Name -ne "ConcatenateDefaults_AllowFresh" -or $_.Key -ne "Software\Policies\Microsoft\Windows\CredentialsDelegation"}
 
                 Try{
                     #Grab all polices but filter out the one that needs be removed. Then update the entire system policy (this set thte removed policy as not configured)
@@ -1143,30 +1131,28 @@ Function Set-LocalPolicyUserSetting {
     }
     Process
     {
-        <#TEST SAMPLE
-        $RegPath='HKLM:\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='HKLM\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='Registry::HKEY_USERS\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='HKCU:\software\policies\microsoft\office\16.0\outlook\cached mode'
-        $RegPath='software\policies\microsoft\office\16.0\outlook\cached mode'
-        $Name='enable';$Type='DWord';$Value=1;$ApplyTo='AllUsers';$Force=$true
-        #>
         #grab the hive from the regpath
-        $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
+        $RegHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
 
         #check if hive is local machine.
-        If($RegKeyHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
-            Throw ("Registry path [{1}] is not a user path. Use ' Set-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegKeyHive)
+        If($RegHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
+            Throw ("Registry path [{1}] is not a user path. Use ' Set-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegHive)
         }
-         #detect if first values has hive; otherwise assume allusers
-        ElseIf( -Not(Test-Path "$($RegKeyHive):" -PathType Container) ){
-            $RegKeyHive = 'HKCU'
+
+        #detect if first values has hive; otherwise assume allusers
+        If( -Not(Test-Path "$($RegHive):" -PathType Container) ){
+            $RegHive = 'HKCU'
             $RegKeyPath = $RegPath
         }
-        Else{
-            #if Name not specified, grab last value from full path
+
+        #if Name not specified, grab last value from full path
+        If($PSBoundParameters.ContainsKey('Name')){
             $RegKeyPath = ($RegPath).Split('\',2)[1]
             $RegKeyName = $Name
+        }
+        Else{
+            $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
+            $RegKeyName = ($RegPath).Split('\')[-1]
         }
 
         #Grab user keys and profiles based on whom it will be applied to
@@ -1174,11 +1160,7 @@ Function Set-LocalPolicyUserSetting {
             'AllUsers'      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
             'CurrentUser'   {$RegHive = 'HKCU'      ; $ProfileList = ($UserProfiles | Where-Object{$_.SID -eq $CurrentSID})}
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
-        }
-
-        #Overwrite hive value in key path is apply hive is found
-        If($RegHive){
-            $RegKeyHive = $RegHive
+            default      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
 
         #loop through profiles as long as the hive is not the current user hive
@@ -1328,20 +1310,26 @@ Function Remove-LocalPolicyUserSetting {
     Process
     {
         #grab the hive from the regpath
-        $RegKeyHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
+        $RegHive = ($RegPath).Split('\')[0].Replace('Registry::','').Replace(':','')
         #check if hive is local machine.
-        If($RegKeyHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
-            Throw ("Registry path [{1}] is not a user path. Use 'Remove-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegKeyHive)
+        If($RegHive -match "HKEY_LOCAL_MACHINE|HKLM|HKCR"){
+            Throw ("Registry path [{1}] is not a user path. Use 'Remove-LocalPolicySetting' cmdlet instead" -f ${CmdletName},$RegHive)
         }
-        #detect if first valus has hive; otherwise assume allusers
-        ElseIf( -Not(Test-Path "$($RegKeyHive):" -PathType Container) ){
-            $RegKeyHive = 'HKCU'
+
+        #detect if first values has hive; otherwise assume allusers
+        If( -Not(Test-Path "$($RegHive):" -PathType Container) ){
+            $RegHive = 'HKCU'
             $RegKeyPath = $RegPath
         }
-        Else{
-            #if Name not specified, grab last value from full path
+
+        #if Name not specified, grab last value from full path
+        If($PSBoundParameters.ContainsKey('Name')){
             $RegKeyPath = ($RegPath).Split('\',2)[1]
             $RegKeyName = $Name
+        }
+        Else{
+            $RegKeyPath = Split-Path ($RegPath).Split('\',2)[1] -Parent
+            $RegKeyName = ($RegPath).Split('\')[-1]
         }
 
         #Grab user keys and profiles based on whom it will be applied to
@@ -1349,11 +1337,7 @@ Function Remove-LocalPolicyUserSetting {
             'AllUsers'      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
             'CurrentUser'   {$RegHive = 'HKCU'      ; $ProfileList = ($UserProfiles | Where-Object{$_.SID -eq $CurrentSID})}
             'DefaultUser'   {$RegHive = 'HKU'       ; $ProfileList = $DefaultProfile}
-        }
-
-        #Overwrite hive value in key path is apply hive is found
-        If($RegHive){
-            $RegKeyHive = $RegHive
+            default         {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
         }
 
         #loop through profiles as long as the hive is not the current user hive
@@ -1409,7 +1393,7 @@ Function Clear-LocalPolicySettings{
         SupportsShouldProcess,
         ConfirmImpact = 'High'
     )]
-    param(
+    Param (
         [Parameter(Mandatory=$false,Position=1)]
         [ValidateSet('Machine','Computer','User')]
         $Policy,
@@ -1467,6 +1451,467 @@ Function Clear-LocalPolicySettings{
         Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
     }
 }
+
+
+
+function Get-IniContent{
+    <#
+    $value = $iniContent[“386Enh"][“EGA80WOA.FON"]
+    $iniContent[“386Enh"].Keys | %{$iniContent["386Enh"][$_]}
+    #>
+    [CmdletBinding()]
+    Param(
+        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory=$True)]
+        [string]$FilePath
+    )
+    Begin{
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"
+        $ini = @{}
+    }
+    Process{
+        switch -regex -file $FilePath
+        {
+            "^\[(.+)\]" # Section
+            {
+                $section = $matches[1]
+                $ini[$section] = @{}
+                $CommentCount = 0
+            }
+            "^(;.*)$" # Comment
+            {
+                $value = $matches[1]
+                $CommentCount = $CommentCount + 1
+                $name = "Comment" + $CommentCount
+                $ini[$section][$name] = $value
+            }
+            "(.+?)\s*=(.*)" # Key
+            {
+                $name,$value = $matches[1..2]
+                $ini[$section][$name] = $value
+            }
+        }
+       return $ini
+    }
+    End{
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"
+    }
+}
+
+
+
+function Set-IniContent{
+    [CmdletBinding()]
+    Param(
+        [Parameter(ValueFromPipeline=$True,Mandatory=$True)]
+        [Hashtable]$InputObject,
+
+        [Parameter(Mandatory=$True)]
+        [string]$FilePath,
+
+        [ValidateSet("Unicode","UTF7","UTF8","UTF32","ASCII","BigEndianUnicode","Default","OEM")]
+        [Parameter()]
+        [string]$Encoding = "Unicode",
+
+        [switch]$Force,
+
+        [switch]$Append,
+
+        [switch]$Passthru,
+
+        [switch]$NewLine
+    )
+    Begin{
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Function started"
+    }
+    Process{
+        if ($append) {$outfile = Get-Item $FilePath}
+        else {$outFile = New-Item -ItemType file -Path $Filepath -Force:$Force -ErrorAction SilentlyContinue}
+        if (!($outFile)) {Throw "Could not create File"}
+        foreach ($i in $InputObject.keys){
+            if (!($($InputObject[$i].GetType().Name) -eq "Hashtable")){
+                #No Sections
+                Write-Verbose "$($MyInvocation.MyCommand.Name):: Writing key: $i"
+                Add-Content -Path $outFile -Value "$i=$($InputObject[$i])" -NoNewline -Encoding $Encoding
+
+            }
+            else {
+                #Sections
+                Write-Verbose "$($MyInvocation.MyCommand.Name):: Writing Section: [$i]"
+                $fullList = Get-IniContent $FilePath
+                $sectionFound = $fullList[$i]
+
+                #if section [] was not found add it
+                If(!$sectionFound){
+                    #Add-Content -Path $outFile -Value "" -Encoding $Encoding
+                    Add-Content -Path $outFile -Value "[$i]" -Encoding $Encoding
+                    }
+
+                Foreach ($j in ($InputObject[$i].keys | Sort-Object)){
+                    if ($j -match "^Comment[\d]+") {
+                        Write-Verbose "$($MyInvocation.MyCommand.Name):: Writing comment: $j"
+                        Add-Content -Path $outFile -Value "$($InputObject[$i][$j])" -NoNewline -Encoding $Encoding
+                    }
+                    else {
+                        Write-Verbose "$($MyInvocation.MyCommand.Name):: Writing key: $j"
+                        Add-Content -Path $outFile -Value "$j=$($InputObject[$i][$j])" -NoNewline -Encoding $Encoding
+                    }
+                }
+                If($NewLine){Add-Content -Path $outFile -Value "" -Encoding $Encoding}
+            }
+        }
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Finished Writing to file: $path"
+        If($PassThru){Return $outFile}
+    }
+    End{
+        Write-Verbose "$($MyInvocation.MyCommand.Name):: Function ended"
+    }
+}
+
+function Remove-IniContent{
+    <#
+    .SYNOPSIS
+    Removes an entry/line/setting from an INI file.
+
+    .DESCRIPTION
+    A configuration file consists of sections, led by a `[section]` header and followed by `name = value` entries.  This function removes an entry in an INI file.  Something like this:
+
+        [ui]
+        username = Regina Spektor <regina@reginaspektor.com>
+
+        [extensions]
+        share =
+        extdiff =
+
+    Names are not allowed to contains the equal sign, `=`.  Values can contain any character.  The INI file is parsed using `Split-IniContent`.  [See its documentation for more examples.](Split-IniContent.html)
+
+    If the entry doesn't exist, does nothing.
+    Be default, operates on the INI file case-insensitively. If your INI is case-sensitive, use the `-CaseSensitive` switch.
+
+    .LINK
+    Set-IniEntry
+
+    .LINK
+    Split-IniContent
+
+    .EXAMPLE
+    Remove-IniEntry -Path C:\Projects\Carbon\StupidStupid.ini -Section rat -Name tails
+
+    Removes the `tails` item in the `[rat]` section of the `C:\Projects\Carbon\StupidStupid.ini` file.
+
+    .EXAMPLE
+    Remove-IniEntry -Path C:\Users\me\npmrc -Name 'prefix' -CaseSensitive
+
+    Demonstrates how to remove an INI entry in an INI file that is case-sensitive.
+    #>
+
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param
+    (
+        [Parameter(Mandatory=$true)]
+        [string]
+        # The path to the INI file.
+        $Path,
+        [string]
+        # The name of the INI entry to remove.
+        $Name,
+        [string]
+        # The section of the INI where the entry should be set.
+        $Section,
+        [Switch]
+        # Removes INI entries in a case-sensitive manner.
+        $CaseSensitive
+    )
+
+    $settings = @{ }
+
+    if( Test-Path $Path -PathType Leaf ){
+        $settings = Split-IniContent -Path $Path -AsHashtable -CaseSensitive:$CaseSensitive
+    }
+    else{
+       Write-Error ('INI file {0} not found.' -f $Path)
+        return
+    }
+
+    $key = $Name
+    if( $Section ){
+        $key = '{0}.{1}' -f $Section,$Name
+    }
+
+    if( $settings.ContainsKey( $key ) )
+    {
+        $lines = New-Object 'Collections.ArrayList'
+        Get-Content -Path $Path | ForEach-Object { [void] $lines.Add( $_ ) }
+        $null = $lines.RemoveAt( ($settings[$key].LineNumber - 1) )
+        if( $PSCmdlet.ShouldProcess( $Path, ('remove INI entry {0}' -f $key) ) )
+        {
+            if( $lines ){
+                $lines | Set-Content -Path $Path
+            }
+            else{
+                Clear-Content -Path $Path
+            }
+        }
+    }
+}
+
+Function Set-LocalPolicyUserRightsAssignment{
+    <#
+https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/secedit-export
+https://docs.microsoft.com/en-us/windows/security/threat-protection/security-policy-settings/user-rights-assignment
+
+    #>
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory=$true,Position=0)]
+        [ValidateSet('SeAssignPrimaryTokenPrivilege',
+                    'SeAuditPrivilege',
+                    'SeBackupPrivilege',
+                    'SeBatchLogonRight',
+                    'SeChangeNotifyPrivilege',
+                    'SeCreateGlobalPrivilege',
+                    'SeCreatePagefilePrivilege',
+                    'SeCreatePermanentPrivilege',
+                    'SeCreateSymbolicLinkPrivilege',
+                    'SeCreateTokenPrivilege',
+                    'SeDebugPrivilege',
+                    'SeDelegateSessionUserImpersonatePrivilege',
+                    'SeDenyBatchLogonRight',
+                    'SeDenyInteractiveLogonRight',
+                    'SeDenyNetworkLogonRight',
+                    'SeDenyRemoteInteractiveLogonRight',
+                    'SeDenyServiceLogonRight',
+                    'SeEnableDelegationPrivilege',
+                    'SeImpersonatePrivilege',
+                    'SeIncreaseBasePriorityPrivilege',
+                    'SeIncreaseQuotaPrivilege',
+                    'SeIncreaseWorkingSetPrivilege',
+                    'SeInteractiveLogonRight',
+                    'SeLoadDriverPrivilege',
+                    'SeLockMemoryPrivilege',
+                    'SeMachineAccountPrivilege',
+                    'SeManageVolumePrivilege',
+                    'SeNetworkLogonRight',
+                    'SeProfileSingleProcessPrivilege',
+                    'SeRelabelPrivilege',
+                    'SeRemoteInteractiveLogonRight',
+                    'SeRemoteShutdownPrivilege',
+                    'SeRestorePrivilege',
+                    'SeSecurityPrivilege',
+                    'SeServiceLogonRight',
+                    'SeShutdownPrivilege',
+                    'SeSyncAgentPrivilege',
+                    'SeSystemEnvironmentPrivilege',
+                    'SeSystemProfilePrivilege',
+                    'SeSystemtimePrivilege',
+                    'SeTakeOwnershipPrivilege',
+                    'SeTcbPrivilege',
+                    'SeTimeZonePrivilege',
+                    'SeTrustedCredManAccessPrivilege',
+                    'SeUndockPrivilege'
+        )]
+        [array]$Privilege,
+
+        [Parameter(Mandatory=$true,Position=1)]
+        [array]$User,
+
+
+
+        [Parameter(Mandatory=$false)]
+        [ValidateScript({Test-path $_ -PathType Leaf})]
+        $LGPOBinaryPath = "$env:ALLUSERSPROFILE\LGPO\LGPO.exe"
+    )
+    Begin
+    {
+        ## Get the name of this function
+        [string]${CmdletName} = $PSCmdlet.MyInvocation.MyCommand.Name
+
+        if (-not $PSBoundParameters.ContainsKey('Verbose')) {
+            $VerbosePreference = $PSCmdlet.SessionState.PSVariable.GetValue('VerbosePreference')
+        }
+
+        if (-not $PSBoundParameters.ContainsKey('Confirm')) {
+            $ConfirmPreference = $PSCmdlet.SessionState.PSVariable.GetValue('ConfirmPreference')
+        }
+        if (-not $PSBoundParameters.ContainsKey('WhatIf')) {
+            $WhatIfPreference = $PSCmdlet.SessionState.PSVariable.GetValue('WhatIfPreference')
+        }
+        If(!(Test-Path $InfPath)){
+            Write-Log -Message "[$InfPath] not specified or does not exist. Unable to build LGPO Template." -CustomComponent "Template" -ColorLevel 6 -NewLine -HostMsg
+            exit -1
+        }Else{
+            #build array with content
+            $GptTmplContent = Split-IniContent -Path $InfPath
+        }
+
+        #First export security policy
+        Try{
+            $result = Start-Process secedit -ArgumentList "/export /cfg `"$env:Temp\secedit.backup.inf`"" -RedirectStandardError "$env:Temp\secedit.backup.stderr" -RedirectStandardOutput "$env:Temp\secedit.backup.stdout" -Wait -WindowStyle Hidden -PassThru -ErrorAction Stop
+            Write-Verbose ("{0} : Secedit backup ran successfully." -f ${CmdletName})
+        }
+        Catch{
+            Throw ("Failed to backup security settings. {0}" -f $result.ExitCode)
+        }
+        Finally{
+            $CurrentSecurityPolicy = Get-content "$env:Temp\secedit.backup.inf"
+        }
+    }
+
+    Process
+    {
+        <# SAMPLE TESTS
+        [array]$User = '*S-1-1-0','*S-1-5-20','*S-1-5-32-544','*S-1-5-32-545','*S-1-5-32-551'
+        [array]$User = 'S-1-1-1','S-1-5-20'
+        [array]$User = 'Everyone','NT AUTHORITY\NETWORK SERVICE'
+        $name = $User[0]
+        $name = $User[-1]
+        #>
+        $SIDSet = @()
+        Foreach($name in $User)
+        {
+            if ($name -match 'S-\d-(?:\d+-){1,14}\d+'){
+                $SID = $name.replace('*','')
+                #Translate SID to User; if it doesn't translate don't add to
+                $objSID = New-Object System.Security.Principal.SecurityIdentifier($SID)
+                Try{
+                    $UserName = ($objSID.Translate([System.Security.Principal.NTAccount])).Value
+                    Write-Verbose ("{0} : Translated user [{1}] to User [{2}]." -f ${CmdletName},$SID,$UserName)
+                }
+                Catch{
+                    Write-Verbose ("{0} : Error with SID [{1}]. {2}" -f ${CmdletName},$SID,$_.Exception.Message)
+                    Continue
+                }
+            }
+            else{
+                $UserName = $User
+                #Translate User to SID
+                Try{
+                    $SID = ((New-Object System.Security.Principal.NTAccount($name)).Translate([System.Security.Principal.SecurityIdentifier])).Value
+                    Write-Verbose ("{0} : Translated user [{1}] to SID [{2}]." -f ${CmdletName},$UserName,$SID)
+                }
+                Catch{
+                    Write-Verbose ("{0} : Unable to get SID from [{1}]. {2}" -f ${CmdletName},$UserName,$_.Exception.Message)
+                    Continue
+                }
+            }
+            $SID = '*' + $SID
+            $SIDSet += $SID
+        }
+        $NewUsers = $SIDSet -join ','
+
+        <# SAMPLE TESTS
+        [array]$Privilege = 'SeNetworkLogonRight','SeBackupPrivilege'
+
+        $Right = $Privilege[0]
+        #>
+        #$MatchPrivilege = $Privilege -join '|'
+
+        Foreach($Right in $Privilege)
+        {
+            $NewRights = $Right + " = " + $NewUsers
+            If($ExistingRights = ($CurrentSecurityPolicy | Select-String -Pattern $Right).Line)
+            {
+                $RightsToReplace = $ExistingRights
+                $CurrentSecurityPolicy = $CurrentSecurityPolicy.replace($RightsToReplace,$NewRights)
+            }
+            Else{
+
+            }
+
+
+        }
+        $CurrentSecurityPolicy | Set-Content "$env:Temp\secedit.updated.inf"
+
+        <#
+        #generate start of file
+        $secedit =  "[Unicode]`r`n"
+        $secedit += "Unicode=yes`r`n"
+        $secedit += "[Version]`r`n"
+        $secedit += "signature=`"`$CHICAGO`$`"`r`n"
+        $secedit += "Revision=1`r`n"
+        #>
+
+
+
+        #get system access section
+        If (($GptTmplContent.Section -eq 'System Access').count -gt 0){
+            $SystemAccessFound = $true
+            Write-host "'System Access' section found in [$InfPath], building list...." -ForegroundColor Cyan
+            $secedit += "[System Access]`r`n"
+
+            $AccessValueList = $GptTmplContent | Where {$_.section -eq 'System Access'}
+            Foreach ($AccessKey in $AccessValueList){
+                $AccessName = $AccessKey.Name
+                $AccessValue = $AccessKey.Value
+                If ($AccessName -eq "NewAdministratorName"){
+                    $AccessValue = $AccessValue -replace $AccessKey.Value, "$Global:NewAdministratorName"
+                }
+                If ($AccessName -eq "NewGuestName"){
+                    $AccessValue = $AccessValue -replace $AccessKey.Value, "$Global:NewGuestName"
+                }
+                $secedit += "$AccessName = $AccessValue`r`n"
+                #$secedit += "$PrivilegeValue"
+            }
+        }
+        Else{
+            $SystemAccessFound = $false
+            Write-host "'System Access' section was not found in [$InfPath], skipping..." -ForegroundColor Gray
+        }
+
+        #next get Privilege Rights section
+        If (($GptTmplContent.Section -eq 'Privilege Rights').count -gt 0){
+            $PrivilegeRightsFound = $true
+            Write-host "'Privilege Rights' section found in [$InfPath], building list...." -ForegroundColor Cyan
+            $secedit += "[Privilege Rights]`r`n"
+
+            $PrivilegeValueList = $GptTmplContent | Where {$_.section -eq 'Privilege Rights'}
+            Foreach ($PrivilegeKey in $PrivilegeValueList){
+                $PrivilegeName = $PrivilegeKey.Name
+                $PrivilegeValue = $PrivilegeKey.Value
+
+                If ($PrivilegeValue -match "ADD YOUR ENTERPRISE ADMINS|ADD YOUR DOMAIN ADMINS|S-1-5-21"){
+
+                    If($IsMachinePartOfDomain){
+                        $EA_SID = Get-UserToSid -Domain $envMachineDNSDomain -User "Enterprise Admins"
+                        $DA_SID = Get-UserToSid -Domain $envMachineDNSDomain -User "Domain Admins"
+                        $PrivilegeValue = $PrivilegeValue -replace "ADD YOUR ENTERPRISE ADMINS",$EA_SID
+                        $PrivilegeValue = $PrivilegeValue -replace "ADD YOUR DOMAIN ADMINS",$DA_SID
+                    }
+                    Else{
+                        $ADMIN_SID = Get-UserToSid -LocalAccount 'Administrators'
+                        $PrivilegeValue = $PrivilegeValue -replace "ADD YOUR ENTERPRISE ADMINS",$ADMIN_SID
+                        $PrivilegeValue = $PrivilegeValue -replace "ADD YOUR DOMAIN ADMINS",$ADMIN_SID
+                        $PrivilegeValue = $PrivilegeValue -replace "S-1-5-21-[0-9-]+",$ADMIN_SID
+                    }
+                }
+                #split up values, get only unique values and make it a comma deliminated list again
+                $temp = $PrivilegeValue -split ","
+                $PrivilegeValue = $($temp | Get-Unique) -join ","
+
+
+                $secedit += "$PrivilegeName = $PrivilegeValue`r`n"
+                #$secedit += "$PrivilegeValue"
+
+                #Write-Log -Message "RUNNING COMMAND: SECEDIT /configure /db secedit.sdb /cfg '$workingTempPath\$($GPO.name).seceditapply.inf' /overwrite /log '$workingLogPath\$($GPO.name).seceditapply.log' /quiet" -CustomComponent "COMMAND" -ColorLevel 8 -NewLine None -HostMsg
+                #Start-Process SECEDIT -ArgumentList " /configure /db secedit.sdb /cfg ""$workingTempPath\$($GPO.name).seceditapply.inf"" /overwrite /quiet" -RedirectStandardOutput "$workingLogPath\$($GPO.name).secedit.stdout.log" -RedirectStandardError "$workingLogPath\$($GPO.name).secedit.stderr.log" -Wait -NoNewWindow
+                #$SeceditApplyResults = ECHO y| SECEDIT /configure /db secedit.sdb /cfg "$workingTempPath\$($GPO.name).seceditapply.inf" /overwrite /log "$workingLogPath\$($GPO.name).seceditapply.log"
+            }
+        }
+        Else{
+            $PrivilegeRightsFound = $false
+            Write-host "'Privilege Rights' was not found in [$InfPath], skipping..." -ForegroundColor Gray
+        }
+
+
+    }
+    End {
+        If($secedit){
+            $secedit | Out-File "$env:Temp\$OutputName" -Force
+            Write-host "Saved file to [$env:Temp\$OutputName]" -ForegroundColor Gray
+        }
+    }
+}
+
 
 $exportModuleMemberParams = @{
     Function = @(
