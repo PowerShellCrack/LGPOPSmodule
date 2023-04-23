@@ -1,10 +1,23 @@
 # Change log for LGPO module
 
+## 1.0.3.9 April 22, 2023
+
+- Fixed Machine and Computer check in two cmdlets. Thanks @simonlrostron
+- Fixed LGPO installer. Space after file name causing hang. Thanks Enforce@jonblankenshipjonblankenship
+- Fixed Posh code lint problems. 
+
+## 1.0.3.8 September 1, 2022
+
+- Fixed enforce cmdlet Set-LocalPolicySetting; was set to $force
+- Added gpupdate to each cmdlet when calling Enforce
+
 ## 1.0.3.7 August 29, 2022
+
 - Fixed enforce Boolean value; made alias for Force for compatibility
 - Added pipeline for Key Name (Path and value must be same)
 
 ## 1.0.3.6 August 29, 2022
+
 - Fixed name not found for Set-LocalUserPolicySetting; Apply to wasn't writing correct path and name
 - Removed test sample data from module.
 

@@ -84,7 +84,7 @@ Function Get-LocalPolicySettings {
             #Build argumentlist
             $lgpoargs = @()
             $lgpoargs += '/parse'
-            If($Policy -eq 'Computer'){
+            If($Policy -in @('Computer','Machine')){
                 $lgpoargs += '/m'
                 $PolicyPath = 'Machine'
             }Else{
@@ -121,7 +121,7 @@ Function Get-LocalPolicySettings {
                 #$r = $i
                 If($r -eq 0){
                     #build object to start
-                    $LgpoPol = '' | Select Hive,Key,Name,Type,Value
+                    $LgpoPol = '' | Select-Object Hive,Key,Name,Type,Value
                     $LgpoPol.Hive = $LgpoContentClean[$line]
                 }
                 If($r -eq 1){$LgpoPol.Key = $LgpoContentClean[$line]}
@@ -302,7 +302,11 @@ Function Update-LocalPolicySettings{
         #check if path exists
         If(Test-Path $LGPOBinaryPath)
         {
-            If($Policy -eq 'Computer'){$PolicyPath = 'Machine'}Else{$PolicyPath = 'User'}
+            If( $Policy -in @('Computer','Machine') ){
+                $PolicyPath = 'Machine'
+            }Else{
+                $PolicyPath = 'User'
+            }
             # Build agrument list
             # should look like this: /r path\lgpo.txt /w path\registry.pol [/v]
             $lgpoargs = @()
@@ -423,7 +427,7 @@ Function Get-LocalPolicySystemSettings{
         If($LGPOBinaryPath){$LGPOSplat += @{LGPOBinaryPath=$LGPOBinaryPath}}
 
         #convert spat hashtable to string for whatif output
-        $LGPOSplatString = $LGPOSplat.GetEnumerator() | %{('/' + $_.Key + ' ' + $_.Value) -join ' '} | Select -Last 1
+        $LGPOSplatString = $LGPOSplat.GetEnumerator() | ForEach-Object {('/' + $_.Key + ' ' + $_.Value) -join ' '} | Select-Object -Last 1
 
         If($WhatIfPreference)
         {
@@ -643,7 +647,7 @@ Function Set-LocalPolicySetting {
             Write-Error ("Local Policy was not set; LGPO binaries not found in path [{1}].`nDownload binaries from 'https://www.microsoft.com/en-us/download/details.aspx?id=55319' " -f ${CmdletName},$LGPOBinaryPath)
         }
 
-        If($Force -eq $true)
+        If($EnForce -eq $true)
         {
             #rebuild full path with hive
             $RegPath = ($RegHive +'\'+ $RegKeyPath)
@@ -672,6 +676,13 @@ Function Set-LocalPolicySetting {
         }
     }
     End {
+        If($EnForce -eq $true)
+        {
+            $GPArgument = "/Target:Computer /Force"
+            Write-Verbose ("{0} : RUNNING COMMAND: Start-Process -FilePath `"gpupdate`" -ArgumentList `"$GPArgument`" -Wait -PassThru -WindowStyle Hidden" -f ${CmdletName})
+            Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
+        }
+
         #cleanup LGPO temp files if not debugging
         If( (Test-Path "$env:Temp\$LgpoFileName.lgpo" -PathType Leaf) -and !$DebugPreference ){
             Remove-Item "$env:Temp\$LgpoFileName.lgpo" -ErrorAction SilentlyContinue -Force | Out-Null
@@ -926,6 +937,12 @@ Function Remove-LocalPolicySetting {
         }
     }
     End {
+        If($EnForce -eq $true)
+        {
+            $GPArgument = "/Target:Computer /Force"
+            Write-Verbose ("{0} : RUNNING COMMAND: Start-Process -FilePath `"gpupdate`" -ArgumentList `"$GPArgument`" -Wait -PassThru -WindowStyle Hidden" -f ${CmdletName})
+            Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
+        }
         #cleanup LGPO temp files if not debugging
         If( (Test-Path "$env:Temp\$LgpoFileName.lgpo" -PathType Leaf) -and !$DebugPreference ){
                Remove-Item "$env:Temp\$LgpoFileName.lgpo" -ErrorAction SilentlyContinue -Force | Out-Null
@@ -1006,7 +1023,7 @@ Function Get-LocalPolicyUserSettings {
         If($Filter){
             $LGPOSplat += @{Filter=$Filter}
         }
-        $LGPOSplatString = $LGPOSplat.GetEnumerator() | %{('/' + $_.Key + ' ' + $_.Value) -join ' '} | Select -Last 1
+        $LGPOSplatString = $LGPOSplat.GetEnumerator() | ForEach-Object{('/' + $_.Key + ' ' + $_.Value) -join ' '} | Select-Object -Last 1
 
         If($WhatIfPreference)
         {
@@ -1151,7 +1168,7 @@ Function Set-LocalPolicyUserSetting {
         #Break down registry to get path
         $RegKeyPath = ($RegPath).Split('\',2)[1]
         $RegKeyName = $Name
-        
+
         #Grab user keys and profiles based on whom it will be applied to
         Switch($ApplyTo){
             'AllUsers'      {$RegHive = 'Registry::HKEY_USERS'; $ProfileList = $UserProfiles}
@@ -1202,6 +1219,14 @@ Function Set-LocalPolicyUserSetting {
             Set-LocalPolicySetting -Path "$RegHive\$RegKeyPath" -Name $RegKeyName -Type $Type -Value $Value -LGPOBinaryPath $LGPOBinaryPath -Enforce:$Enforce -WhatIf:$WhatIfPreference
         }
 
+    }
+    End{
+        If($EnForce -eq $true)
+        {
+            $GPArgument = "/Target:User /Force"
+            Write-Verbose ("{0} : RUNNING COMMAND: Start-Process -FilePath `"gpupdate`" -ArgumentList `"$GPArgument`" -Wait -PassThru -WindowStyle Hidden" -f ${CmdletName})
+            Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
+        }
     }
 }
 
@@ -1388,7 +1413,12 @@ Function Remove-LocalPolicyUserSetting {
 
     }
     End {
-
+        If($EnForce -eq $true)
+        {
+            $GPArgument = "/Target:User /Force"
+            Write-Verbose ("{0} : RUNNING COMMAND: Start-Process -FilePath `"gpupdate`" -ArgumentList `"$GPArgument`" -Wait -PassThru -WindowStyle Hidden" -f ${CmdletName})
+            Start-Process -FilePath "gpupdate" -ArgumentList "$GPArgument" -Wait -WindowStyle Hidden | Out-Null
+        }
     }
 }
 
@@ -1839,11 +1869,10 @@ https://docs.microsoft.com/en-us/windows/security/threat-protection/security-pol
 
         #get system access section
         If (($GptTmplContent.Section -eq 'System Access').count -gt 0){
-            $SystemAccessFound = $true
             Write-host "'System Access' section found in [$InfPath], building list...." -ForegroundColor Cyan
             $secedit += "[System Access]`r`n"
 
-            $AccessValueList = $GptTmplContent | Where {$_.section -eq 'System Access'}
+            $AccessValueList = $GptTmplContent | Where-Object {$_.section -eq 'System Access'}
             Foreach ($AccessKey in $AccessValueList){
                 $AccessName = $AccessKey.Name
                 $AccessValue = $AccessKey.Value
@@ -1858,17 +1887,15 @@ https://docs.microsoft.com/en-us/windows/security/threat-protection/security-pol
             }
         }
         Else{
-            $SystemAccessFound = $false
             Write-host "'System Access' section was not found in [$InfPath], skipping..." -ForegroundColor Gray
         }
 
         #next get Privilege Rights section
         If (($GptTmplContent.Section -eq 'Privilege Rights').count -gt 0){
-            $PrivilegeRightsFound = $true
             Write-host "'Privilege Rights' section found in [$InfPath], building list...." -ForegroundColor Cyan
             $secedit += "[Privilege Rights]`r`n"
 
-            $PrivilegeValueList = $GptTmplContent | Where {$_.section -eq 'Privilege Rights'}
+            $PrivilegeValueList = $GptTmplContent | Where-Object {$_.section -eq 'Privilege Rights'}
             Foreach ($PrivilegeKey in $PrivilegeValueList){
                 $PrivilegeName = $PrivilegeKey.Name
                 $PrivilegeValue = $PrivilegeKey.Value
@@ -1902,7 +1929,6 @@ https://docs.microsoft.com/en-us/windows/security/threat-protection/security-pol
             }
         }
         Else{
-            $PrivilegeRightsFound = $false
             Write-host "'Privilege Rights' was not found in [$InfPath], skipping..." -ForegroundColor Gray
         }
 
@@ -1915,6 +1941,8 @@ https://docs.microsoft.com/en-us/windows/security/threat-protection/security-pol
         }
     }
 }
+
+
 
 
 $exportModuleMemberParams = @{

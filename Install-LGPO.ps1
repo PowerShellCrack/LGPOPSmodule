@@ -17,8 +17,7 @@ Param(
 #=======================================================
 $ErrorActionPreference = "Stop"
 $Localpath = "$Env:ALLUSERSPROFILE\LGPO"
-$Installer = 'LGPO.zip
-'
+$Installer = 'LGPO.zip'
 ##*=============================================
 ##* Runtime Function - REQUIRED
 ##*=============================================
