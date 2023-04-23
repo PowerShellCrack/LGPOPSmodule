@@ -84,7 +84,7 @@ Function Get-LocalPolicySettings {
             #Build argumentlist
             $lgpoargs = @()
             $lgpoargs += '/parse'
-            If($Policy -in @('Computer','Machine')){
+            If($Policy -in @('Computer', 'Machine')){
                 $lgpoargs += '/m'
                 $PolicyPath = 'Machine'
             }Else{
