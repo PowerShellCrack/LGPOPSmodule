@@ -2,8 +2,8 @@
 
 ## 1.0.3.9 April 22, 2023
 
-- Fixed Machine and Computer check in two cmdlets. Thanks [@simonlrostron]
-- Fixed LGPO installer. Space after file name causing hang. Thanks [@jonblankenshipjonblankenship]
+- Fixed Machine and Computer check in two cmdlets. Thanks @simonlrostron
+- Fixed LGPO installer. Space after file name causing hang. Thanks [@jonblankenship] (https://github.com/jonblankenship)
 - Fixed Posh code lint problems. 
 
 ## 1.0.3.8 September 1, 2022
