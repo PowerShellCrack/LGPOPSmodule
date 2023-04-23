@@ -26,6 +26,7 @@
 - Fixed issue where running Set-LocalPolicyUserSetting with HKLM in path still applies to user. Should error with message
 - Changed some write-error to throw to ensure terminating; updated string to create new line for download link
 - Updated Get-LocalPolicySettings to look for lgpo path as default instead of forced
+- Grammatical updates. Thanks [@meichthys](https://github.com/meichthys)
 
 ## 1.0.3.4 June 05, 2022
 
